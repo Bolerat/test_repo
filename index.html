@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f6f3ec">
+  <title>同窝 Covey · 宠物日常</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='%23d96f4e' d='M12 13c-2.6 0-5.6 2-6.9 3.9-1.2 1.7-.5 4.1 1.4 4.1 1.7 0 2.3-1.4 3.4-2.5.4-.4 1.1-.4 1.5 0 1.1 1.1 1.7 2.5 3.4 2.5 1.9 0 2.6-2.4 1.4-4.1C17.6 15 14.6 13 12 13Zm-5.2-6.2c.8-1.3 2.5-1.7 3.8-.9l1.1.9 1.1-.9c1.3-.8 3-.4 3.8.9.7 1.2.3 2.7-.8 3.4l-3.1 2.3a1.2 1.2 0 0 1-1.6 0L6.4 10.2c-1.1-.7-1.5-2.2-.8-3.4Z'/></svg>">
+</head>
+<body>
+  <svg class="symbols" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="i-paw" viewBox="0 0 24 24"><path d="M12 13.2c-2.7 0-5.8 2-7.1 3.9-1.2 1.7-.4 4.2 1.5 4.2 1.7 0 2.2-1.4 3.3-2.6.4-.3 1.1-.3 1.5 0 1.1 1.2 1.6 2.6 3.3 2.6 1.9 0 2.7-2.5 1.5-4.2-1.3-1.9-4.4-3.9-7.1-3.9Zm-5.4-6.4c.9-1.3 2.6-1.8 3.9-1l1.2.9 1.2-.9c1.3-.8 3-.3 3.9 1 .8 1.2.4 2.8-.8 3.5l-3.2 2.3a1.2 1.2 0 0 1-1.6 0L6.6 10.3c-1.2-.7-1.6-2.3-.8-3.5Z" fill="currentColor"/></symbol>
+    <symbol id="i-bowl" viewBox="0 0 24 24"><path d="M4 12h16a8 8 0 0 1-16 0Zm3-3.5 1-1.2m3-1.3 1-1.5m3 1.5 1-1.2m-6.5 8.5h5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 3.5s6 6.6 6 10.7a6 6 0 1 1-12 0C6 10.1 12 3.5 12 3.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3c.8 4.5 2.4 6.2 7 7-4.6.8-6.2 2.5-7 7-.8-4.5-2.4-6.2-7-7 4.6-.8 6.2-2.5 7-7Z" fill="currentColor"/></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20s-7.5-4.6-9.3-9A5.2 5.2 0 0 1 12 6.3 5.2 5.2 0 0 1 21.3 11c-1.8 4.4-9.3 9-9.3 9Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+    <symbol id="i-foot" viewBox="0 0 24 24"><circle cx="8" cy="4.5" r="1.6" fill="currentColor"/><circle cx="16" cy="4.5" r="1.6" fill="currentColor"/><circle cx="5" cy="10" r="1.6" fill="currentColor"/><circle cx="12" cy="9.5" r="1.6" fill="currentColor"/><circle cx="19" cy="10" r="1.6" fill="currentColor"/><path d="M12 12v4.5c0 2-1.2 3.5-3 3.5s-2.6-1.2-2.6-2.6M12 13.5c.8.2 1.8.2 2.6 0 1.4-.3 2.4-.2 2.4 1.4 0 1.4-1.2 2.6-2.6 2.6s-3-1.2-3-3.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16h12l-1.5-2.2V10a4.5 4.5 0 0 0-9 0v3.8L6 16Zm4 3a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h2l1.2-1.8h4.6L15.5 6h2A2.5 2.5 0 0 1 20 8.5v8a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 16.5v-8Zm8 5.5a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-note" viewBox="0 0 24 24"><path d="M6 3.5h9l4 4v13H6v-17Zm3 5h7m-7 4h7m-7 4h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9 8.5h4.2a2.3 2.3 0 0 1 0 4.6H9zm3 4.6v3.4m-1.8-6.4h3.4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
+    <symbol id="i-health" viewBox="0 0 24 24"><path d="M12 20s-7-4.3-7-9.3A3.8 3.8 0 0 1 12 8a3.8 3.8 0 0 1 7 2.7c0 5-7 9.3-7 9.3Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 11.5h3l1-2 1.5 4 1-2h1.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5v-15Zm0 15A1.5 1.5 0 0 1 6.5 18H19" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M5 20a7 7 0 0 1 14 0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm7.5 3.5.9 1.4-1.8 1-1.4.3-1 1.3-.2 1.7h-2.2l-.2-1.7-1-1.3-1.4-.3-1.8-1 .9-1.4.9-1.4-1-1.4 1.8-1 1.4-.3 1-1.3.2-1.7h2.2l.2 1.7 1 1.3 1.4.3 1.8 1-.9 1.4-.9 1.4Z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" transform="translate(0 -1)"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="15" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M4 10h16M8.5 3v4m7-4v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="9" cy="14.5" r="1" fill="currentColor"/><circle cx="12" cy="14.5" r="1" fill="currentColor"/><circle cx="15" cy="14.5" r="1" fill="currentColor"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M4 20h16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M8 16v-5m4 5V8m4 8v-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="M12 19V5m-6 6 6-6 6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 4v11m-4.5-4.5L12 15l4.5-4.5M5 19h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 15V4m-4.5 4.5L12 4l4.5 4.5M5 19h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M5 7h14M9.5 7V5h5v2m-8 0 .8 12h9.4l.8-12M10 11v5m4-5v5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-wand" viewBox="0 0 24 24"><path d="m4 20 10.5-10.5M14 4l1 2.5L17.5 7.5 15 8.5 14 11l-1-2.5L10.5 8 13 7 14 4Zm7 9 1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1 1-2.5Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-cat" viewBox="0 0 24 24"><path d="M5 9 3.5 4l4.5 2.2L12 4l4 2.2L20.5 4 19 9c1.5 2 2 4.5 1.5 7-.6 3-3.5 5-8.5 5s-7.9-2-8.5-5C3 13.5 3.5 11 5 9Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="9" cy="11.5" r=".9" fill="currentColor"/><circle cx="15" cy="11.5" r=".9" fill="currentColor"/><path d="M11 14h2l-1 1.2-1-1.2Z" fill="currentColor"/></symbol>
+    <symbol id="i-dog" viewBox="0 0 24 24"><path d="M5 10c0-3 2.5-5 7-5s7 2 7 5v5c0 4-2.5 7-7 7s-7-3-7-7v-5Z" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M5.5 9C4 8 3 9.5 3.5 11m15-2c1.5-.5 2.5.5 2 2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="9" cy="11.5" r=".9" fill="currentColor"/><circle cx="15" cy="11.5" r=".9" fill="currentColor"/><path d="M11.5 14.5h1l-.5 1.3-.5-1.3Z" fill="currentColor"/></symbol>
+    <symbol id="i-rabbit" viewBox="0 0 24 24"><path d="M8 4c-1 2-1.2 5-.2 7m8.2-7c1 2 1.2 5 .2 7M12 10c-2.5 0-4.5 2-4.5 5 0 2.5 2 4 4.5 4s4.5-1.5 4.5-4c0-3-2-5-4.5-5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="10" cy="13" r=".8" fill="currentColor"/><circle cx="14" cy="13" r=".8" fill="currentColor"/></symbol>
+  </svg>
+
+  <div class="phone">
+    <header class="topbar">
+      <div class="brand"><svg class="brand-paw"><use href="#i-paw"/></svg><span>同窝</span></div>
+      <button class="chip" id="petChip" type="button" data-action="goto-pet"></button>
+    </header>
+
+    <main id="view" class="view" aria-live="polite"></main>
+
+    <nav class="tabbar" aria-label="主导航">
+      <button type="button" data-action="nav" data-route="today" class="tab">
+        <svg><use href="#i-paw"/></svg><span>今日</span>
+      </button>
+      <button type="button" data-action="nav" data-route="journal" class="tab">
+        <svg><use href="#i-book"/></svg><span>记录</span>
+      </button>
+      <button type="button" data-action="nav" data-route="ai" class="tab">
+        <svg><use href="#i-wand"/></svg><span>AI 助手</span>
+      </button>
+      <button type="button" data-action="nav" data-route="pet" class="tab">
+        <svg><use href="#i-cat"/></svg><span>宠物</span>
+      </button>
+      <button type="button" data-action="nav" data-route="me" class="tab">
+        <svg><use href="#i-user"/></svg><span>我的</span>
+      </button>
+    </nav>
+  </div>
+
+  <div id="modalRoot"></div>
+  <input hidden id="photoInput" type="file" accept="image/png,image/jpeg,image/webp" aria-label="选择照片">
+  <input hidden id="importInput" type="file" accept="application/json,.json" aria-label="导入数据文件">
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
