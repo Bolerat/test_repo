@@ -153,10 +153,12 @@ struct AIChatView: View {
     }
 
     private func insightText() -> String {
-        let week = store.weekStats()
         var parts: [String] = []
-        if week.total > 0 { parts.append("这周照护完成率 \(week.rate)%。") }
-        if store.remindersDueSoon().count > 0 { parts.append("\(store.remindersDueSoon().count) 件提醒在 7 天内到期。") }
+        let week = store.weekEntryCount()
+        if week > 0 { parts.append("这周记了 \(week) 条日常。") }
+        if store.data.remindersEnabled && store.remindersDueSoon().count > 0 {
+            parts.append("\(store.remindersDueSoon().count) 件提醒在 7 天内到期。")
+        }
         return parts.isEmpty ? "记录越多，洞察越准确。" : parts.joined()
     }
 

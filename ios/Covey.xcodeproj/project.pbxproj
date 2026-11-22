@@ -12,18 +12,31 @@
 		0FFF3D29D082D952E4931D1A /* CoveyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3D464BE4A1F89C4E09EF6BE /* CoveyApp.swift */; };
 		77D40FC31B8574C7863A4F24 /* PetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFBE829D01F163299C626B32 /* PetView.swift */; };
 		7A397AF431D01FA495E4DB44 /* AIChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80767D38F81F496BA575BEF3 /* AIChatView.swift */; };
+		964E5A959904D0E165C34562 /* CoveyUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 329FB0E56280ED54D00DCFC5 /* CoveyUITests.swift */; };
 		9DD4A7160FE1AFCC542A211B /* Sheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39CC63831F6CD9F9702D62C5 /* Sheets.swift */; };
 		BAE25D2AF24337CB86CC4726 /* Store.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4560153D01FE647ED1A0230E /* Store.swift */; };
 		E2C924808109B0519054A6EF /* JournalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F250C97531642DE7A18B02A2 /* JournalView.swift */; };
 		E4FF6C0323E372F3D6663E3D /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F293DA73DCC048460E1E0104 /* TodayView.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		8999A89F0D7F187875541C7E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 58683F32E5B26F412FDBA54E /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1DB23C0A4201F146B1585478;
+			remoteInfo = Covey;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
+		329FB0E56280ED54D00DCFC5 /* CoveyUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoveyUITests.swift; sourceTree = "<group>"; };
 		397F1B129B37146CE9BFE1E8 /* AIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIService.swift; sourceTree = "<group>"; };
 		39CC63831F6CD9F9702D62C5 /* Sheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sheets.swift; sourceTree = "<group>"; };
 		4560153D01FE647ED1A0230E /* Store.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Store.swift; sourceTree = "<group>"; };
 		80767D38F81F496BA575BEF3 /* AIChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIChatView.swift; sourceTree = "<group>"; };
 		B8572912777BA82716FBD433 /* MeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeView.swift; sourceTree = "<group>"; };
+		DCD762A90C94E73A89AA1A4A /* CoveyUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = CoveyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		DFBE829D01F163299C626B32 /* PetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PetView.swift; sourceTree = "<group>"; };
 		ECCE87E45F37A56AAB291C5D /* Covey.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Covey.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F250C97531642DE7A18B02A2 /* JournalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalView.swift; sourceTree = "<group>"; };
@@ -52,14 +65,24 @@
 			isa = PBXGroup;
 			children = (
 				ECCE87E45F37A56AAB291C5D /* Covey.app */,
+				DCD762A90C94E73A89AA1A4A /* CoveyUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		F44F24F5E000D9AAA435A422 /* UITests */ = {
+			isa = PBXGroup;
+			children = (
+				329FB0E56280ED54D00DCFC5 /* CoveyUITests.swift */,
+			);
+			path = UITests;
 			sourceTree = "<group>";
 		};
 		FD3C3C1322CD403E09E4F801 = {
 			isa = PBXGroup;
 			children = (
 				15BD971447BBE876238DD2E3 /* Sources */,
+				F44F24F5E000D9AAA435A422 /* UITests */,
 				3E33ACFA18D4834052CCD70B /* Products */,
 			);
 			sourceTree = "<group>";
@@ -84,6 +107,24 @@
 			productReference = ECCE87E45F37A56AAB291C5D /* Covey.app */;
 			productType = "com.apple.product-type.application";
 		};
+		9D21F23C1FAD0CBA5932E6D1 /* CoveyUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 86681A18F1935835730D9BBB /* Build configuration list for PBXNativeTarget "CoveyUITests" */;
+			buildPhases = (
+				FEC6D8D72453AE7B81DC7B45 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				DDF73FF113D323EFC916EFAD /* PBXTargetDependency */,
+			);
+			name = CoveyUITests;
+			packageProductDependencies = (
+			);
+			productName = CoveyUITests;
+			productReference = DCD762A90C94E73A89AA1A4A /* CoveyUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -93,6 +134,9 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
+					9D21F23C1FAD0CBA5932E6D1 = {
+						TestTargetID = 1DB23C0A4201F146B1585478;
+					};
 				};
 			};
 			buildConfigurationList = DE0B9DE545987710BB6925EE /* Build configuration list for PBXProject "Covey" */;
@@ -110,6 +154,7 @@
 			projectRoot = "";
 			targets = (
 				1DB23C0A4201F146B1585478 /* Covey */,
+				9D21F23C1FAD0CBA5932E6D1 /* CoveyUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -131,9 +176,44 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		FEC6D8D72453AE7B81DC7B45 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				964E5A959904D0E165C34562 /* CoveyUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		DDF73FF113D323EFC916EFAD /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1DB23C0A4201F146B1585478 /* Covey */;
+			targetProxy = 8999A89F0D7F187875541C7E /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		2EA4D5386AC19B5B34A6C970 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.bolerat.covey.uitests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.9;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Covey;
+			};
+			name = Debug;
+		};
 		3F8844CB34173B1A1BFB6397 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -287,9 +367,37 @@
 			};
 			name = Debug;
 		};
+		C3B4F468B77ABEAF49F972CC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.bolerat.covey.uitests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.9;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Covey;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		86681A18F1935835730D9BBB /* Build configuration list for PBXNativeTarget "CoveyUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2EA4D5386AC19B5B34A6C970 /* Debug */,
+				C3B4F468B77ABEAF49F972CC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		8F367829CA44364AFEE47212 /* Build configuration list for PBXNativeTarget "Covey" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

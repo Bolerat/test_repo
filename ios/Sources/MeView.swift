@@ -1,4 +1,4 @@
-// 同窝 Covey · 我的页（AI 配置、数据、关于）
+// 同窝 Covey · 设置页（AI 配置、提醒、宠物与亲友、数据与隐私）
 import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
@@ -9,21 +9,26 @@ struct MeView: View {
     @State private var baseURL = ""
     @State private var apiKey = ""
     @State private var model = ""
+    @State private var tone = "warm"
     @State private var testResult = ""
     @State private var testing = false
     @State private var showExport = false
     @State private var showClearConfirm = false
+    @State private var showMemory = false
     @State private var importedMsg = ""
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 14) {
-                    Text("我的").font(.title.bold()).frame(maxWidth: .infinity, alignment: .leading)
-                    Text("AI 配置、数据与本地存储。")
+                    Text("设置").font(.title.bold()).frame(maxWidth: .infinity, alignment: .leading)
+                    Text("AI 助手、提醒、数据与本地存储。")
                         .font(.subheadline).foregroundStyle(CoveyTheme.ink2)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     aiCard
+                    remindCard
+                    groupCard
+                    memoryRow
                     dataCard
                     aboutCard
                 }
@@ -34,6 +39,7 @@ struct MeView: View {
             .navigationBarHidden(true)
             .onAppear { syncFromStore() }
             .sheet(isPresented: $showExport) { ExportSheet().environmentObject(store) }
+            .sheet(isPresented: $showMemory) { PawlyMemorySheet().environmentObject(store) }
             .confirmationDialog("清空所有数据？此操作不可恢复。", isPresented: $showClearConfirm, titleVisibility: .visible) {
                 Button("清空", role: .destructive) { store.reset() }
                 Button("取消", role: .cancel) {}
@@ -46,11 +52,14 @@ struct MeView: View {
         baseURL = store.data.ai.baseURL
         apiKey = store.data.ai.apiKey
         model = store.data.ai.model
+        tone = store.data.ai.tone
     }
+
+    // MARK: - AI 助手
 
     private var aiCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("AI 助手设置").font(.headline)
+            Text("AI 助手").font(.headline)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text("服务商").font(.caption).foregroundStyle(CoveyTheme.ink2)
@@ -77,6 +86,18 @@ struct MeView: View {
                     .textFieldStyle(.roundedBorder)
             }
             field("模型", $model, "gpt-4o-mini")
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("AI 语气").font(.caption).foregroundStyle(CoveyTheme.ink2)
+                Picker("AI 语气", selection: $tone) {
+                    ForEach(aiTones, id: \.key) { t in
+                        Text(t.label).tag(t.key)
+                    }
+                }
+                .pickerStyle(.menu)
+                .labelsHidden()
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
 
             Text("配置只保存在本机。若接口不支持跨域访问（原生 App 不受浏览器 CORS 限制），请确认地址可达。")
                 .font(.caption2).foregroundStyle(CoveyTheme.ink2)
@@ -128,19 +149,102 @@ struct MeView: View {
                     .foregroundStyle(testResult.contains("成功") || testResult.contains("已保存") ? CoveyTheme.sage : CoveyTheme.danger)
             }
         }
-        .padding(14)
-        .background(CoveyTheme.card)
-        .overlay(RoundedRectangle(cornerRadius: 18).stroke(CoveyTheme.line))
-        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .modifier(CardStyle())
     }
 
     private func saveConfig() {
-        store.data.ai = AIConfig(provider: provider, baseURL: baseURL.trimmed, apiKey: apiKey.trimmed, model: model.trimmed)
+        var config = AIConfig()
+        config.provider = provider
+        config.baseURL = baseURL.trimmed
+        config.apiKey = apiKey.trimmed
+        config.model = model.trimmed
+        config.tone = tone
+        store.data.ai = config
     }
+
+    // MARK: - 提醒
+
+    private var remindCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("提醒").font(.headline)
+            Toggle("Pawly 提醒", isOn: Binding(
+                get: { store.data.remindersEnabled },
+                set: { store.data.remindersEnabled = $0 }
+            ))
+            .tint(CoveyTheme.accent)
+            Text("开启后，「今日」页会显示 7 天内到期的提醒；关闭后只保留提醒记录本身。")
+                .font(.caption2).foregroundStyle(CoveyTheme.ink2)
+        }
+        .modifier(CardStyle())
+    }
+
+    // MARK: - 宠物与亲友
+
+    private var groupCard: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("宠物与亲友").font(.headline).padding(.bottom, 4)
+            groupRow("宠物档案", "\(store.data.pet.name) · \(speciesLabel)") {
+                goPetTab()
+            }
+            Divider()
+            groupRow("家庭成员", "\(store.data.members.count) 位成员，本机保存") {
+                goPetTab()
+            }
+        }
+        .modifier(CardStyle())
+    }
+
+    private func groupRow(_ title: String, _ sub: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title).font(.subheadline).foregroundStyle(CoveyTheme.ink)
+                    Text(sub).font(.caption2).foregroundStyle(CoveyTheme.ink2)
+                }
+                Spacer()
+                Image(systemName: "chevron.right").font(.caption).foregroundStyle(CoveyTheme.ink3)
+            }
+            .padding(.vertical, 10)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func goPetTab() {
+        NotificationCenter.default.post(name: .switchTab, object: 3)
+    }
+
+    private var speciesLabel: String {
+        speciesOptions.first { $0.key == store.data.pet.species }?.label ?? "其他"
+    }
+
+    // MARK: - Pawly 的记忆
+
+    private var memoryRow: some View {
+        Button { showMemory = true } label: {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Pawly 的记忆").font(.subheadline).foregroundStyle(CoveyTheme.ink)
+                    Text("查看 AI 回答时读取哪些资料")
+                        .font(.caption2).foregroundStyle(CoveyTheme.ink2)
+                }
+                Spacer()
+                Image(systemName: "chevron.right").font(.caption).foregroundStyle(CoveyTheme.ink3)
+            }
+            .padding(14)
+            .background(CoveyTheme.card)
+            .overlay(RoundedRectangle(cornerRadius: 18).stroke(CoveyTheme.line))
+            .clipShape(RoundedRectangle(cornerRadius: 18))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - 数据与隐私
 
     private var dataCard: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("数据").font(.headline).padding(.bottom, 4)
+            Text("数据与隐私").font(.headline).padding(.bottom, 4)
             dataRow("导出数据", "下载全部记录为 JSON 文件") {
                 showExport = true
             }
@@ -155,23 +259,22 @@ struct MeView: View {
             dataRow("清空数据", "删除本机全部记录，不可恢复", danger: true) {
                 showClearConfirm = true
             }
+            Text("所有数据只保存在这台设备上；照片会自动压缩后存储。AI 功能只在你配置 API 后启用。")
+                .font(.caption2).foregroundStyle(CoveyTheme.ink2)
+                .padding(.top, 8)
         }
-        .padding(14)
-        .background(CoveyTheme.card)
-        .overlay(RoundedRectangle(cornerRadius: 18).stroke(CoveyTheme.line))
-        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .modifier(CardStyle())
     }
+
+    // MARK: - 关于
 
     private var aboutCard: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("关于").font(.headline)
-            Text("同窝 Covey · 本地优先的宠物日常。所有数据保存在这台设备中，AI 功能需要你在上方配置自己的 API。")
+            Text("同窝 Covey · 围绕你和宠物的日常。记录、照片、提醒和 AI 建议都以宠物为中心。")
                 .font(.caption).foregroundStyle(CoveyTheme.ink2)
         }
-        .padding(14)
-        .background(CoveyTheme.card)
-        .overlay(RoundedRectangle(cornerRadius: 18).stroke(CoveyTheme.line))
-        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .modifier(CardStyle())
     }
 
     private func field(_ label: String, _ binding: Binding<String>, _ placeholder: String) -> some View {
@@ -203,7 +306,6 @@ struct MeView: View {
     }
 
     private func importFromFile() {
-        // 用文件选择器导入 JSON
         let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.json])
         let delegate = ImportDelegate { url in
             guard let url, let data = try? Data(contentsOf: url) else { importedMsg = "读取失败"; return }
@@ -214,6 +316,56 @@ struct MeView: View {
         if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
            let root = scene.windows.first?.rootViewController {
             root.present(picker, animated: true)
+        }
+    }
+}
+
+private struct CardStyle: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .padding(14)
+            .background(CoveyTheme.card)
+            .overlay(RoundedRectangle(cornerRadius: 18).stroke(CoveyTheme.line))
+            .clipShape(RoundedRectangle(cornerRadius: 18))
+    }
+}
+
+// MARK: - Pawly 的记忆
+
+struct PawlyMemorySheet: View {
+    @EnvironmentObject var store: Store
+    @Environment(\.dismiss) private var dismiss
+
+    private var speciesLabel: String {
+        speciesOptions.first { $0.key == store.data.pet.species }?.label ?? "其他"
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Pawly 回答时会读取") {
+                    Text("宠物档案：\(store.data.pet.name)（\(speciesLabel)）")
+                    Text("最近 \(min(store.data.entries.count, 15)) 条记录")
+                    Text("近 14 天每天的记录数量")
+                    if let last = store.data.weights.last {
+                        Text("体重：最近 \(last.kg) kg（\(last.date)）")
+                    } else {
+                        Text("体重：暂无记录")
+                    }
+                    Text("提醒：\(store.data.remindersEnabled ? "\(store.remindersDueSoon().count) 件待办" : "已关闭")")
+                    Text("AI 对话：最近 20 条")
+                }
+                Section("说明") {
+                    Text("这些资料只在你配置了 API 后发送给对应的 AI 服务，用于生成回答；不配置时 Pawly 只使用本机规则给出观察。你可以随时更换或清除 API 配置。")
+                        .font(.caption)
+                        .foregroundStyle(CoveyTheme.ink2)
+                }
+            }
+            .navigationTitle("Pawly 的记忆")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) { Button("关闭") { dismiss() } }
+            }
         }
     }
 }
@@ -230,7 +382,7 @@ struct ExportSheet: View {
             VStack(spacing: 16) {
                 Image(systemName: "square.and.arrow.down").font(.largeTitle).foregroundStyle(CoveyTheme.accent)
                 Text("导出全部数据").font(.headline)
-                Text("包含宠物档案、照护记录、手账、提醒、体重和 AI 聊天记录。")
+                Text("包含宠物档案、记录、提醒、体重和 AI 对话历史。")
                     .font(.caption).foregroundStyle(CoveyTheme.ink2).multilineTextAlignment(.center)
                 if !savedTo.isEmpty {
                     Text(savedTo).font(.caption).foregroundStyle(CoveyTheme.sage)

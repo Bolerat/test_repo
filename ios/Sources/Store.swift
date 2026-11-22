@@ -17,19 +17,8 @@ struct Member: Codable, Identifiable {
     var role: String      // owner | caregiver | viewer
 }
 
-struct CareTask: Codable, Identifiable {
-    var id: String
-    var title: String
-    var type: String      // feeding | water | clean | walk | companion
-    var time: String      // HH:mm
-}
-
-struct TaskCompletion: Codable {
-    var by: String
-    var at: Date
-}
-
 enum EntryType: String, Codable {
+    // care 仅用于兼容旧版本完成照护任务生成的记录，新版不再产生
     case care, note, photo, spend, health
     var label: String {
         switch self {
@@ -95,7 +84,19 @@ struct AIConfig: Codable {
     var baseURL = "https://api.deepseek.com/v1"
     var apiKey = ""
     var model = "deepseek-chat"
+    var tone = "warm"    // warm | lively | concise | calm，见 aiTones
     var configured: Bool { !apiKey.trimmed.isEmpty && !baseURL.trimmed.isEmpty }
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        provider = try c.decodeIfPresent(String.self, forKey: .provider) ?? "deepseek"
+        baseURL = try c.decodeIfPresent(String.self, forKey: .baseURL) ?? "https://api.deepseek.com/v1"
+        apiKey = try c.decodeIfPresent(String.self, forKey: .apiKey) ?? ""
+        model = try c.decodeIfPresent(String.self, forKey: .model) ?? "deepseek-chat"
+        tone = try c.decodeIfPresent(String.self, forKey: .tone) ?? "warm"
+    }
 }
 
 struct ChatMessage: Codable, Identifiable {
@@ -110,13 +111,33 @@ struct CoveyData: Codable {
     var pet = Pet()
     var activeMember = "me"
     var members: [Member] = [Member(id: "me", name: "我", role: "owner")]
-    var tasks: [CareTask] = []
-    var completions: [String: [String: TaskCompletion]] = [:]
     var entries: [Entry] = []
     var reminders: [Reminder] = []
+    var remindersEnabled = true
     var weights: [WeightRecord] = []
     var ai = AIConfig()
     var chat: [ChatMessage] = []
+
+    init() {}
+
+    // 逐字段容错解码：旧版本数据缺少新字段时保留已有内容；
+    // 但完全不含已知字段的 JSON（如 {"foo":"bar"}）视为无效数据，拒绝解码
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let knownKeys: [CodingKeys] = [.pet, .activeMember, .members, .entries, .reminders, .remindersEnabled, .weights, .ai, .chat]
+        guard knownKeys.contains(where: { c.contains($0) }) else {
+            throw DecodingError.dataCorruptedError(forKey: .pet, in: c, debugDescription: "不是同窝的数据文件")
+        }
+        pet = try c.decodeIfPresent(Pet.self, forKey: .pet) ?? Pet()
+        activeMember = try c.decodeIfPresent(String.self, forKey: .activeMember) ?? "me"
+        members = try c.decodeIfPresent([Member].self, forKey: .members) ?? [Member(id: "me", name: "我", role: "owner")]
+        entries = try c.decodeIfPresent([Entry].self, forKey: .entries) ?? []
+        reminders = try c.decodeIfPresent([Reminder].self, forKey: .reminders) ?? []
+        remindersEnabled = try c.decodeIfPresent(Bool.self, forKey: .remindersEnabled) ?? true
+        weights = try c.decodeIfPresent([WeightRecord].self, forKey: .weights) ?? []
+        ai = try c.decodeIfPresent(AIConfig.self, forKey: .ai) ?? AIConfig()
+        chat = try c.decodeIfPresent([ChatMessage].self, forKey: .chat) ?? []
+    }
 }
 
 // MARK: - 预设
@@ -133,18 +154,13 @@ let aiProviders: [(key: String, label: String, baseURL: String, model: String)] 
     ("custom", "自定义（OpenAI 兼容）", "", ""),
 ]
 
-func defaultTasks(for species: String) -> [CareTask] {
-    let base = [
-        CareTask(id: "breakfast", title: "早餐", type: "feeding", time: "07:30"),
-        CareTask(id: "water", title: "换水", type: "water", time: "12:00"),
-        CareTask(id: "dinner", title: "晚餐", type: "feeding", time: "18:30"),
-    ]
-    switch species {
-    case "dog": return base + [CareTask(id: "walk", title: "遛弯", type: "walk", time: "20:00")]
-    case "cat": return base + [CareTask(id: "litter", title: "清理猫砂", type: "clean", time: "20:00")]
-    default: return base + [CareTask(id: "play", title: "陪伴玩耍", type: "companion", time: "20:00")]
-    }
-}
+/// Pawly 的语气选项：hint 会注入系统提示词
+let aiTones: [(key: String, label: String, hint: String)] = [
+    ("warm", "温暖陪伴", "像家人一样自然关心，语气温和，不说教"),
+    ("lively", "活泼俏皮", "轻松幽默，可以偶尔用 emoji，但不过分"),
+    ("concise", "简洁利落", "直奔重点，少寒暄，先给答案"),
+    ("calm", "冷静专业", "条理清晰，先结论后依据，语气平稳"),
+]
 
 // MARK: - 时间工具
 
@@ -160,6 +176,8 @@ func timeKey(_ d: Date = Date()) -> String {
     f.dateFormat = "HH:mm"
     return f.string(from: d)
 }
+
+
 
 func uid(_ prefix: String = "id") -> String {
     "\(prefix)-\(UUID().uuidString.prefix(8))-\(Int(Date().timeIntervalSince1970) % 100000)"
@@ -182,12 +200,8 @@ final class Store: ObservableObject {
 
     private func load() {
         guard let raw = UserDefaults.standard.data(forKey: key),
-              let decoded = try? JSONDecoder().decode(CoveyData.self, from: raw) else {
-            data.tasks = defaultTasks(for: data.pet.species)
-            return
-        }
+              let decoded = try? JSONDecoder().decode(CoveyData.self, from: raw) else { return }
         data = decoded
-        if data.tasks.isEmpty { data.tasks = defaultTasks(for: data.pet.species) }
     }
 
     private func save() {
@@ -198,64 +212,29 @@ final class Store: ObservableObject {
 
     func reset() {
         data = CoveyData()
-        data.tasks = defaultTasks(for: data.pet.species)
     }
 
-    // MARK: 照护任务
+    // MARK: 记录统计
 
-    func isTaskDone(_ id: String, on day: String = dateKey()) -> Bool {
-        data.completions[day]?[id] != nil
+    /// 最近 days 天的记录
+    func entriesSince(days: Int) -> [Entry] {
+        let since = Calendar.current.date(byAdding: .day, value: -days, to: Date()) ?? Date()
+        return data.entries.filter { $0.ts >= since }
     }
 
-    func toggleTask(_ id: String) {
-        if isTaskDone(id) { undoTask(id) } else { completeTask(id) }
-    }
+    func weekEntryCount() -> Int { entriesSince(days: 7).count }
 
-    func completeTask(_ id: String) {
-        let day = dateKey()
-        var dayMap = data.completions[day] ?? [:]
-        guard dayMap[id] == nil else { return }
-        dayMap[id] = TaskCompletion(by: data.activeMember, at: Date())
-        data.completions[day] = dayMap
-        if let task = data.tasks.first(where: { $0.id == id }) {
-            data.entries.insert(Entry(id: uid("e"), ts: Date(), type: .care, text: task.title, taskId: id), at: 0)
-        }
-    }
-
-    func undoTask(_ id: String) {
-        let day = dateKey()
-        data.completions[day]?.removeValue(forKey: id)
-        data.entries.removeAll { $0.type == .care && $0.taskId == id && dateKey($0.ts) == day }
-    }
-
-    func careProgress() -> (done: Int, total: Int) {
-        (data.tasks.filter { isTaskDone($0.id) }.count, data.tasks.count)
-    }
-
-    func careStreak() -> Int {
+    /// 连续记录天数：今天或昨天有记录就算起点
+    func recordStreak() -> Int {
         var streak = 0
         var cursor = Date()
-        let allDoneToday = data.tasks.allSatisfy { isTaskDone($0.id) }
-        if !allDoneToday { cursor = Calendar.current.date(byAdding: .day, value: -1, to: cursor)! }
-        while true {
-            let key = dateKey(cursor)
-            guard data.tasks.allSatisfy({ isTaskDone($0.id, on: key) }) else { break }
+        let hasToday = data.entries.contains { dateKey($0.ts) == dateKey() }
+        if !hasToday { cursor = Calendar.current.date(byAdding: .day, value: -1, to: cursor)! }
+        while data.entries.contains(where: { dateKey($0.ts) == dateKey(cursor) }) {
             streak += 1
             cursor = Calendar.current.date(byAdding: .day, value: -1, to: cursor)!
         }
         return streak
-    }
-
-    func weekStats() -> (done: Int, total: Int, rate: Int) {
-        var done = 0
-        for i in stride(from: 6, through: 0, by: -1) {
-            let d = Calendar.current.date(byAdding: .day, value: -i, to: Date())!
-            let key = dateKey(d)
-            let comp = data.completions[key] ?? [:]
-            done += data.tasks.filter { comp[$0.id] != nil }.count
-        }
-        let total = data.tasks.count * 7
-        return (done, total, total == 0 ? 0 : Int(round(Double(done) / Double(total) * 100)))
     }
 
     func remindersDueSoon(days: Int = 7) -> [Reminder] {
@@ -293,11 +272,6 @@ final class Store: ObservableObject {
         data.pet.weight = String(kg)
     }
 
-    func setSpecies(_ species: String) {
-        data.pet.species = species
-        data.tasks = defaultTasks(for: species)
-    }
-
     // MARK: AI
 
     func appendChat(_ msg: ChatMessage) {
@@ -322,7 +296,6 @@ final class Store: ObservableObject {
     func importJSON(_ raw: Data) -> Bool {
         guard let decoded = try? JSONDecoder().decode(CoveyData.self, from: raw) else { return false }
         data = decoded
-        if data.tasks.isEmpty { data.tasks = defaultTasks(for: data.pet.species) }
         return true
     }
 }

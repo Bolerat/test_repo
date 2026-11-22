@@ -63,7 +63,7 @@ struct JournalView: View {
     private var filterRow: some View {
         let items: [(String, String)] = [
             ("all", "全部"), ("photo", "照片"), ("spend", "花费"),
-            ("care", "照护"), ("health", "健康"), ("note", "日常"),
+            ("health", "健康"), ("note", "日常"),
         ]
         return ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
