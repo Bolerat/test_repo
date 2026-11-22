@@ -18,9 +18,11 @@ struct Member: Codable, Identifiable {
 }
 
 enum EntryType: String, Codable {
-    case note, photo, spend, health
+    // care 仅用于兼容旧版本完成照护任务生成的记录，新版不再产生
+    case care, note, photo, spend, health
     var label: String {
         switch self {
+        case .care: return "照护"
         case .note: return "日常"
         case .photo: return "照片"
         case .spend: return "花费"
@@ -29,6 +31,7 @@ enum EntryType: String, Codable {
     }
     var symbol: String {
         switch self {
+        case .care: return "checkmark.circle.fill"
         case .note: return "note.text"
         case .photo: return "camera.fill"
         case .spend: return "yensign.circle.fill"
@@ -117,9 +120,14 @@ struct CoveyData: Codable {
 
     init() {}
 
-    // 逐字段容错解码：旧版本数据缺少新字段时保留已有内容
+    // 逐字段容错解码：旧版本数据缺少新字段时保留已有内容；
+    // 但完全不含已知字段的 JSON（如 {"foo":"bar"}）视为无效数据，拒绝解码
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
+        let knownKeys: [CodingKeys] = [.pet, .activeMember, .members, .entries, .reminders, .remindersEnabled, .weights, .ai, .chat]
+        guard knownKeys.contains(where: { c.contains($0) }) else {
+            throw DecodingError.dataCorruptedError(forKey: .pet, in: c, debugDescription: "不是同窝的数据文件")
+        }
         pet = try c.decodeIfPresent(Pet.self, forKey: .pet) ?? Pet()
         activeMember = try c.decodeIfPresent(String.self, forKey: .activeMember) ?? "me"
         members = try c.decodeIfPresent([Member].self, forKey: .members) ?? [Member(id: "me", name: "我", role: "owner")]

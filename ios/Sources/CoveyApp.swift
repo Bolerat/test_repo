@@ -87,7 +87,7 @@ extension Color {
 
 func tagColor(_ type: String) -> Color {
     switch type {
-    case "spend": return CoveyTheme.accent
+    case "spend", "care": return CoveyTheme.accent
     case "photo": return CoveyTheme.blue
     case "note": return CoveyTheme.sage
     case "health": return CoveyTheme.danger
