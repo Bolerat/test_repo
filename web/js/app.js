@@ -52,12 +52,15 @@ function renderToday() {
   const streak = careStreak(state);
   const week = weekStats(state);
   const reminders = remindersDueSoon(state, 7);
-  const weights = state.weights;
   const lastW = lastWeight(state);
-  const daysW = daysSinceWeight(state);
 
-  const circumference = 2 * Math.PI * 18;
-  const offset = circumference * (1 - (total ? done / total : 0));
+  const allDone = total > 0 && done === total;
+  const heroCirc = 2 * Math.PI * 42;
+  const heroOffset = heroCirc * (1 - (total ? done / total : 0));
+  const speciesInfo = SPECIES[pet.species] || SPECIES.other;
+  const age = pet.birthday ? ageText(pet.birthday) : '';
+  const petTags = [speciesInfo.label, pet.breed, age].filter(Boolean);
+  const heroWeight = lastW ? lastW.kg : pet.weight;
 
   const taskRows = state.tasks.map((t) => {
     const finished = isTaskDone(state, t.id);
@@ -91,13 +94,26 @@ function renderToday() {
 
   return `
     <section>
-      <div class="hero">
-        <div>
-          <p class="hero-date">${dateCN}</p>
-          <h1>${esc(pet.name)}的日常</h1>
+      <div class="pet-hero">
+        <div class="pet-hero-top">
+          <div class="pet-avatar ${allDone ? 'all-done' : ''}">
+            <svg class="pet-ring" viewBox="0 0 92 92">
+              <circle class="bg-ring" cx="46" cy="46" r="42"></circle>
+              <circle class="fg-ring" cx="46" cy="46" r="42" stroke-dasharray="${heroCirc.toFixed(1)}" stroke-dashoffset="${heroOffset.toFixed(1)}"></circle>
+            </svg>
+            <div class="pet-face">${icon(speciesInfo.icon)}</div>
+            <span class="pet-badge">${icon(allDone ? 'i-check' : 'i-paw')}${done}/${total}</span>
+          </div>
+          <div class="pet-id">
+            <h1>${esc(pet.name)}</h1>
+            <div class="pet-tags">${petTags.map((t) => `<span>${esc(t)}</span>`).join('')}</div>
+            <p class="pet-date">${icon('i-cal')}${dateCN}</p>
+          </div>
         </div>
-        <div class="hero-actions">
-          <span class="streak">${icon('i-heart')} 连续照顾 ${streak} 天</span>
+        <div class="pet-stats">
+          <div class="pet-stat"><div class="v"><i class="accent">${icon('i-heart')}</i>${streak}<small>天</small></div><div class="l">连续照顾</div></div>
+          <div class="pet-stat"><div class="v"><i class="sage">${icon('i-chart')}</i>${week.rate}<small>%</small></div><div class="l">近 7 天完成</div></div>
+          <div class="pet-stat"><div class="v"><i class="blue">${icon('i-health')}</i>${heroWeight ? `${heroWeight}<small>kg</small>` : '—'}</div><div class="l">体重</div></div>
         </div>
       </div>
 
@@ -108,21 +124,9 @@ function renderToday() {
       </div>
 
       <div class="card">
-        <div class="progress-wrap">
-          <svg class="progress-ring" viewBox="0 0 44 44">
-            <circle class="bg-ring" cx="22" cy="22" r="18"></circle>
-            <circle class="fg-ring" cx="22" cy="22" r="18" stroke-dasharray="${circumference.toFixed(1)}" stroke-dashoffset="${offset.toFixed(1)}"></circle>
-          </svg>
-          <div class="progress-text"><strong>${done} / ${total}</strong> 今日照护<br><span class="small muted">${done === total && total > 0 ? '今天照顾得很到位' : '完成一件是一件'}</span></div>
-        </div>
+        <div class="card-head"><h2>今日照护</h2><span class="care-count">${done}/${total}</span></div>
+        <div class="care-bar"><span style="width:${total ? (done / total) * 100 : 0}%"></span></div>
         <ul class="task-list">${taskRows}</ul>
-      </div>
-
-      <div class="insight-grid">
-        <div class="insight"><div class="num">${week.rate}%</div><div class="label">近 7 天照护完成率（${week.done}/${week.total}）</div></div>
-        <div class="insight"><div class="num">${reminders.length}</div><div class="label">7 天内待办提醒</div></div>
-        <div class="insight"><div class="num">${lastW ? lastW.kg + ' kg' : '—'}</div><div class="label">${lastW ? `最近体重 · ${daysW === 0 ? '今天' : daysW + ' 天前记录'}` : '还没有体重记录'}</div></div>
-        <div class="insight"><div class="num">${weights.length}</div><div class="label">体重记录次数</div></div>
       </div>
 
       <div class="card">

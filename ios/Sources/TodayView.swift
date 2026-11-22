@@ -18,7 +18,6 @@ struct TodayView: View {
                 VStack(alignment: .leading, spacing: 14) {
                     hero
                     quickRow
-                    insightGrid
                     if store.data.remindersEnabled { reminderCard }
                     pawlyCard
                     recentSection
@@ -58,25 +57,143 @@ struct TodayView: View {
     }
 
     private var hero: some View {
-        HStack(alignment: .center) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(weekdayCN(Date()))
-                    .font(.subheadline)
-                    .foregroundStyle(CoveyTheme.ink2)
-                Text("\(store.data.pet.name)的日常")
-                    .font(.title.bold())
+        let pet = store.data.pet
+        let todayCount = store.data.entries.filter { dateKey($0.ts) == dateKey() }.count
+        let weight = store.data.weights.last.map { formatKg($0.kg) } ?? (pet.weight.isEmpty ? nil : pet.weight)
+        return VStack(spacing: 16) {
+            HStack(spacing: 16) {
+                petAvatar(count: todayCount)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(pet.name)
+                        .font(.system(size: 30, weight: .bold, design: .rounded))
+                        .foregroundStyle(CoveyTheme.ink)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                    HStack(spacing: 6) {
+                        ForEach(petTags, id: \.self) { tag in
+                            Text(tag)
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(CoveyTheme.ink2)
+                                .padding(.horizontal, 8).padding(.vertical, 3)
+                                .background(.white.opacity(0.75))
+                                .clipShape(Capsule())
+                        }
+                    }
+                    Label(weekdayCN(Date()), systemImage: "calendar")
+                        .font(.caption)
+                        .foregroundStyle(CoveyTheme.ink3)
+                }
+                Spacer(minLength: 0)
             }
-            Spacer()
-            HStack(spacing: 4) {
-                Image(systemName: "heart.fill").font(.caption)
-                Text("连续记录 \(store.recordStreak()) 天").font(.caption.bold())
+            HStack(spacing: 0) {
+                heroStat(symbol: "flame.fill", color: CoveyTheme.accent, value: "\(store.recordStreak())", unit: "天", label: "连续记录")
+                heroDivider
+                heroStat(symbol: "book.closed.fill", color: CoveyTheme.sage, value: "\(store.weekEntryCount())", unit: "条", label: "近 7 天记录")
+                heroDivider
+                heroStat(symbol: "scalemass.fill", color: CoveyTheme.blue, value: weight ?? "—", unit: weight == nil ? "" : "kg", label: "体重")
             }
-            .foregroundStyle(Color(hex: 0x8A6A1F))
-            .padding(.horizontal, 10).padding(.vertical, 6)
-            .background(CoveyTheme.goldSoft)
-            .clipShape(Capsule())
+            .padding(.vertical, 12)
+            .background(.white.opacity(0.72))
+            .clipShape(RoundedRectangle(cornerRadius: 16))
         }
+        .padding(16)
+        .background(heroBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 24))
         .padding(.top, 8)
+    }
+
+    private var heroBackground: some View {
+        ZStack {
+            LinearGradient(colors: [CoveyTheme.accentSoft, CoveyTheme.goldSoft], startPoint: .topLeading, endPoint: .bottomTrailing)
+            Image(systemName: "pawprint.fill")
+                .font(.system(size: 120))
+                .foregroundStyle(.white.opacity(0.45))
+                .rotationEffect(.degrees(-24))
+                .offset(x: 130, y: -50)
+            Image(systemName: "pawprint.fill")
+                .font(.system(size: 44))
+                .foregroundStyle(.white.opacity(0.4))
+                .rotationEffect(.degrees(18))
+                .offset(x: 60, y: 10)
+        }
+    }
+
+    /// 头像进度环：今天记满 3 条算一个完整的日常节奏
+    private func petAvatar(count: Int) -> some View {
+        let goal = 3
+        let ratio = min(CGFloat(count) / CGFloat(goal), 1)
+        let full = count >= goal
+        return ZStack {
+            Circle().fill(.white)
+            Image(systemName: speciesSymbol)
+                .font(.system(size: 36))
+                .foregroundStyle(CoveyTheme.accent)
+            Circle().stroke(.white.opacity(0.7), lineWidth: 6).padding(-6)
+            Circle()
+                .trim(from: 0, to: ratio)
+                .stroke(full ? CoveyTheme.sage : CoveyTheme.accent,
+                        style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+                .padding(-6)
+                .animation(.easeOut(duration: 0.4), value: ratio)
+        }
+        .frame(width: 76, height: 76)
+        .padding(6)
+        .overlay(alignment: .bottom) {
+            HStack(spacing: 3) {
+                Image(systemName: full ? "checkmark" : "note.text")
+                Text("\(count)")
+            }
+            .font(.caption2.bold())
+            .foregroundStyle(.white)
+            .padding(.horizontal, 8).padding(.vertical, 3)
+            .background(full ? CoveyTheme.sage : CoveyTheme.accent)
+            .clipShape(Capsule())
+            .overlay(Capsule().stroke(.white, lineWidth: 2))
+            .offset(y: 8)
+        }
+    }
+
+    private func heroStat(symbol: String, color: Color, value: String, unit: String, label: String) -> some View {
+        VStack(spacing: 4) {
+            HStack(alignment: .firstTextBaseline, spacing: 2) {
+                Image(systemName: symbol).font(.caption).foregroundStyle(color)
+                Text(value).font(.system(.title3, design: .rounded).bold()).foregroundStyle(CoveyTheme.ink)
+                if !unit.isEmpty { Text(unit).font(.caption2.bold()).foregroundStyle(CoveyTheme.ink2) }
+            }
+            Text(label).font(.caption2).foregroundStyle(CoveyTheme.ink3)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var heroDivider: some View {
+        Rectangle().fill(CoveyTheme.line).frame(width: 1, height: 28)
+    }
+
+    private var speciesSymbol: String {
+        switch store.data.pet.species {
+        case "cat": return "cat.fill"
+        case "dog": return "dog.fill"
+        case "rabbit": return "hare.fill"
+        default: return "pawprint.fill"
+        }
+    }
+
+    private var petTags: [String] {
+        let pet = store.data.pet
+        var tags: [String] = []
+        if let label = speciesOptions.first(where: { $0.key == pet.species })?.label { tags.append(label) }
+        if !pet.breed.isEmpty { tags.append(pet.breed) }
+        if let birth = dateFormatterCN.date(from: pet.birthday) {
+            let age = Calendar.current.dateComponents([.year, .month], from: birth, to: Date())
+            if let y = age.year, y > 0 { tags.append("\(y) 岁") }
+            else if let m = age.month, m >= 0 { tags.append("\(max(m, 1)) 个月") }
+        }
+        return tags
+    }
+
+    private func formatKg(_ kg: Double) -> String {
+        kg == kg.rounded() ? String(Int(kg)) : String(format: "%.1f", kg)
     }
 
     private var petChip: some View {
@@ -123,41 +240,11 @@ struct TodayView: View {
         .clipShape(RoundedRectangle(cornerRadius: 18))
     }
 
-    private var insightGrid: some View {
-        let weekCount = store.weekEntryCount()
-        let due = store.remindersDueSoon().count
-        let lastW = store.data.weights.last
-        let daysW: Int? = lastW.map { Calendar.current.dateComponents([.day], from: dateFormatterCN.date(from: $0.date) ?? Date(), to: Date()).day ?? 0 }
-        let weightValue = lastW.map { "\($0.kg) kg" } ?? "—"
-        var weightLabel = "还没有体重记录"
-        if let d = daysW {
-            weightLabel = "最近体重 · \(d == 0 ? "今天" : "\(d) 天前") 记录"
-        }
-        return LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-            insightTile(value: "\(weekCount)", label: "近 7 天记录")
-            insightTile(value: store.data.remindersEnabled ? "\(due)" : "已关闭", label: "7 天内待办提醒")
-            insightTile(value: weightValue, label: weightLabel)
-            insightTile(value: "\(store.data.entries.count)", label: "累计记录")
-        }
-    }
-
-    private func insightTile(value: String, label: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(value).font(.title3.bold())
-            Text(label).font(.caption2).foregroundStyle(CoveyTheme.ink2)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(CoveyTheme.card)
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(CoveyTheme.line))
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-    }
-
     private var reminderCard: some View {
         let list = store.remindersDueSoon()
         return VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("照护提醒").font(.headline)
+                Text("提醒").font(.headline)
                 Spacer()
                 Button("+ 新建") { showReminderSheet = true }
                     .font(.caption).foregroundStyle(CoveyTheme.accent)
@@ -226,10 +313,13 @@ struct TodayView: View {
             let due = store.remindersDueSoon().count
             if due > 0 { parts.append("\(due) 件提醒在 7 天内到期。") }
         }
-        if store.data.weights.isEmpty {
+        if let lastW = store.data.weights.last {
+            let days = Calendar.current.dateComponents([.day], from: dateFormatterCN.date(from: lastW.date) ?? Date(), to: Date()).day ?? 0
+            if days > 30 { parts.append("体重已经 \(days) 天没记录了。") }
+        } else {
             parts.append("还没有体重记录，记一次可以留意变化。")
         }
-        if parts.isEmpty { return "记录越多，我越能给出有依据的建议。先记下今天的日常吧。" }
+        if parts.isEmpty { return "记下今天的日常，我就能给出更有依据的建议。" }
         return parts.joined()
     }
 
@@ -243,7 +333,7 @@ struct TodayView: View {
             }
             let recent = store.data.entries.prefix(3)
             if recent.isEmpty {
-                Text("还没有记录，完成照护或记一笔后会出现在这里")
+                Text("记一笔或拍照后会出现在这里")
                     .font(.caption).foregroundStyle(CoveyTheme.ink2)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, 12)

@@ -58,7 +58,7 @@ final class CoveyUITests: XCTestCase {
     // MARK: - 记一笔 & 手账
 
     func testNoteEntryAndJournal() {
-        XCTAssertTrue(app.staticTexts["布丁的日常"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["布丁"].waitForExistence(timeout: 10))
 
         app.buttons["记一笔"].tap()
         let noteField = field(containing: "今天发生了什么？")
@@ -68,10 +68,10 @@ final class CoveyUITests: XCTestCase {
         app.buttons["保存"].tap()
         XCTAssertTrue(app.buttons["记一笔"].waitForExistence(timeout: 5))
 
-        // 今日页「最新记录」出现，连续记录徽章变为 1
+        // 今日页「最新记录」出现，连续记录统计可见
         let noteText = "早上喂了半碗猫粮，布丁吃得很香"
         XCTAssertTrue(app.staticTexts[noteText].waitForExistence(timeout: 5))
-        XCTAssertTrue(labeledStaticText("连续记录 1 天").exists)
+        XCTAssertTrue(labeledStaticText("连续记录").exists)
 
         tapTab("记录")
         XCTAssertTrue(app.staticTexts["记录手账"].waitForExistence(timeout: 5))
@@ -96,7 +96,7 @@ final class CoveyUITests: XCTestCase {
     // MARK: - 照护提醒
 
     func testReminderCreation() {
-        XCTAssertTrue(app.staticTexts["布丁的日常"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["布丁"].waitForExistence(timeout: 10))
 
         app.buttons["+ 新建"].tap()
         let titleField = field(containing: "事项（例如：猫三联疫苗加强）")
