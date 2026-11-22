@@ -71,14 +71,16 @@ struct AIService {
     }
 }
 
-/// 注入宠物档案 + 近 14 天照护 + 最近记录 + 体重 + 提醒的系统提示词
+/// 注入宠物档案 + 近 14 天记录概况 + 最近记录 + 体重 + 提醒的系统提示词
 func buildSystemPrompt(from store: Store) -> String {
     let d = store.data
     let speciesLabel = speciesOptions.first { $0.key == d.pet.species }?.label ?? d.pet.species
+    let toneHint = aiTones.first { $0.key == d.ai.tone }?.hint ?? aiTones[0].hint
     var lines: [String] = [
-        "你是「同窝 Covey」里的宠物照护助手，名字叫 Pawly。你陪伴用户照顾家里的宠物。",
-        "说话用简体中文，语气温暖、简洁、像懂宠物的朋友。回答控制在 150 字以内，除非用户要求详细。",
-        "建议要有依据（引用记录或常识），并说明不确定的地方；最终决定权在用户，不要替用户做医疗诊断，涉及生病就建议就医。",
+        "你是「同窝 Covey」里的宠物伙伴助手，名字叫 Pawly。你和用户一起生活，熟悉家里的宠物\(d.pet.name)，像一个经常来往的朋友。",
+        "说话像真人：自然、简短、有温度。避免“根据记录显示”“综上所述”“希望对你有帮助”这类机器腔；不要用生硬的列表腔，除非用户要求详细。",
+        "回答一般几句话说清，可以有一点个人感受，但不过度卖萌。建议要有依据（引用记录或常识），不确定就直说。不替用户做医疗诊断，涉及生病就建议就医。",
+        "语气：\(toneHint)。",
         "",
         "宠物档案：名字「\(d.pet.name)」，物种：\(speciesLabel)\(d.pet.breed.isEmpty ? "" : "，品种：" + d.pet.breed)\(d.pet.birthday.isEmpty ? "" : "，生日：" + d.pet.birthday)\(d.pet.weight.isEmpty ? "，体重未知" : "，体重：" + d.pet.weight + "kg")。",
     ]
@@ -87,12 +89,12 @@ func buildSystemPrompt(from store: Store) -> String {
     for i in stride(from: 13, through: 0, by: -1) {
         let day = Calendar.current.date(byAdding: .day, value: -i, to: Date())!
         let key = dateKey(day)
-        let comp = d.completions[key] ?? [:]
-        let doneTasks = d.tasks.filter { comp[$0.id] != nil }
-        let shortKey = key.dropFirst(5)
-        stats.append("\(shortKey)：\(doneTasks.count)/\(d.tasks.count)（\(doneTasks.map(\.title).joined(separator: "、").isEmpty ? "无" : doneTasks.map(\.title).joined(separator: "、"))）")
+        let count = d.entries.filter { dateKey($0.ts) == key }.count
+        let types = d.entries.filter { dateKey($0.ts) == key }.map { $0.type.label }
+        let summary = types.isEmpty ? "无" : Dictionary(grouping: types, by: { $0 }).map { "\($0.key)×\($0.value.count)" }.sorted().joined(separator: "、")
+        stats.append("\(key.dropFirst(5))：\(count) 条（\(summary)）")
     }
-    lines.append(contentsOf: ["", "近 14 天照护记录："] + stats)
+    lines.append(contentsOf: ["", "近 14 天记录概况："] + stats)
 
     let recent = d.entries.prefix(15).map { e -> String in
         let f = DateFormatter()

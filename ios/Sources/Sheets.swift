@@ -47,23 +47,22 @@ struct NoteSheet: View {
                         .textFieldStyle(.roundedBorder).lineLimit(3...6)
                 }
                 Spacer()
-                HStack {
-                    Button("取消") { dismiss() }
-                        .buttonStyle(.bordered).tint(CoveyTheme.ink2)
+            }
+            .padding(18)
+            .background(CoveyTheme.bg)
+            .navigationTitle("记一笔")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) { Button("取消") { dismiss() } }
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("保存") {
                         let amountValue = type == "spend" ? Double(amount.trimmed) : nil
                         guard !text.trimmed.isEmpty || amountValue != nil else { return }
                         store.addEntry(Entry(id: uid("e"), ts: Date(), type: EntryType(rawValue: type) ?? .note, text: text.trimmed, amount: amountValue))
                         dismiss()
                     }
-                    .buttonStyle(.borderedProminent).tint(CoveyTheme.accent)
-                    .frame(maxWidth: .infinity)
                 }
             }
-            .padding(18)
-            .background(CoveyTheme.bg)
-            .navigationTitle("记一笔")
-            .navigationBarTitleDisplayMode(.inline)
         }
         .presentationDetents([.medium])
     }
@@ -155,16 +154,11 @@ struct ProfileSheet: View {
     }
 
     private func save() {
-        let oldSpecies = store.data.pet.species
         store.data.pet.name = name.trimmed
         store.data.pet.breed = breed.trimmed
         store.data.pet.birthday = hasBirthday ? dateKey(birthday) : ""
         store.data.pet.weight = weight.trimmed
-        if species != oldSpecies {
-            store.setSpecies(species)
-        } else {
-            store.data.pet.species = species
-        }
+        store.data.pet.species = species
         dismiss()
     }
 }

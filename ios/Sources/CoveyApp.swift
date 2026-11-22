@@ -5,6 +5,13 @@ import SwiftUI
 struct CoveyApp: App {
     @StateObject private var store = Store.shared
 
+    init() {
+        // UI 测试启动参数：每次测试从干净状态开始
+        if ProcessInfo.processInfo.arguments.contains("--covey-uitest-reset") {
+            Store.shared.reset()
+        }
+    }
+
     var body: some Scene {
         WindowGroup {
             RootTabView()
@@ -39,6 +46,9 @@ struct RootTabView: View {
         .onReceive(NotificationCenter.default.publisher(for: .askAI)) { note in
             store.pendingAiPrompt = note.object as? String
             tab = 2
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .switchTab)) { note in
+            if let index = note.object as? Int { tab = index }
         }
     }
 }
@@ -77,18 +87,12 @@ extension Color {
 
 func tagColor(_ type: String) -> Color {
     switch type {
-    case "feeding", "spend": return CoveyTheme.accent
-    case "water", "photo": return CoveyTheme.blue
-    case "clean", "note": return CoveyTheme.sage
-    case "walk", "care": return CoveyTheme.gold
-    case "companion": return Color(hex: 0x7A5C8F)
+    case "spend": return CoveyTheme.accent
+    case "photo": return CoveyTheme.blue
+    case "note": return CoveyTheme.sage
     case "health": return CoveyTheme.danger
     default: return CoveyTheme.ink3
     }
-}
-
-func taskTypeLabel(_ type: String) -> String {
-    ["feeding": "喂食", "water": "换水", "clean": "清洁", "walk": "遛弯", "companion": "陪伴"][type] ?? type
 }
 
 func weekdayCN(_ d: Date) -> String {

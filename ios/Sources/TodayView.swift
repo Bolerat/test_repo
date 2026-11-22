@@ -18,9 +18,8 @@ struct TodayView: View {
                 VStack(alignment: .leading, spacing: 14) {
                     hero
                     quickRow
-                    careCard
                     insightGrid
-                    reminderCard
+                    if store.data.remindersEnabled { reminderCard }
                     pawlyCard
                     recentSection
                 }
@@ -70,7 +69,7 @@ struct TodayView: View {
             Spacer()
             HStack(spacing: 4) {
                 Image(systemName: "heart.fill").font(.caption)
-                Text("连续照顾 \(store.careStreak()) 天").font(.caption.bold())
+                Text("连续记录 \(store.recordStreak()) 天").font(.caption.bold())
             }
             .foregroundStyle(Color(hex: 0x8A6A1F))
             .padding(.horizontal, 10).padding(.vertical, 6)
@@ -104,7 +103,7 @@ struct TodayView: View {
                 quickBtn(system: "note.text", title: "记一笔", color: CoveyTheme.sage)
             }
             Button {
-                let prompt = "请根据我家宠物\(store.data.pet.name)最近的照护记录和待办提醒，给我 3 条简短、可执行的建议。"
+                let prompt = "请根据我家宠物\(store.data.pet.name)最近的记录和待办提醒，给我 3 条简短、可执行的建议。"
                 NotificationCenter.default.post(name: .askAI, object: prompt)
             } label: {
                 quickBtn(system: "wand.and.stars", title: "AI 建议", color: CoveyTheme.gold)
@@ -124,72 +123,8 @@ struct TodayView: View {
         .clipShape(RoundedRectangle(cornerRadius: 18))
     }
 
-    private var careCard: some View {
-        let prog = store.careProgress()
-        return VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 12) {
-                ZStack {
-                    Circle().stroke(CoveyTheme.line, lineWidth: 5)
-                    Circle()
-                        .trim(from: 0, to: prog.total == 0 ? 0 : CGFloat(prog.done) / CGFloat(prog.total))
-                        .stroke(CoveyTheme.accent, style: StrokeStyle(lineWidth: 5, lineCap: .round))
-                        .rotationEffect(.degrees(-90))
-                }
-                .frame(width: 44, height: 44)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("\(prog.done) / \(prog.total) 今日照护").font(.subheadline.bold())
-                    Text(prog.done == prog.total && prog.total > 0 ? "今天照顾得很到位" : "完成一件是一件")
-                        .font(.caption).foregroundStyle(CoveyTheme.ink2)
-                }
-            }
-            ForEach(store.data.tasks) { task in
-                let done = store.isTaskDone(task.id)
-                let comp = store.data.completions[dateKey()]?[task.id]
-                HStack(spacing: 12) {
-                    Button { store.toggleTask(task.id) } label: {
-                        ZStack {
-                            Circle().stroke(done ? CoveyTheme.sage : CoveyTheme.line, lineWidth: 2)
-                            if done {
-                                Circle().fill(CoveyTheme.sage)
-                                Image(systemName: "checkmark").font(.caption2.bold()).foregroundStyle(.white)
-                            }
-                        }
-                        .frame(width: 26, height: 26)
-                    }
-                    .buttonStyle(.plain)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(task.title)
-                            .font(.subheadline.weight(.semibold))
-                            .strikethrough(done)
-                            .foregroundStyle(done ? CoveyTheme.ink3 : CoveyTheme.ink)
-                        HStack(spacing: 6) {
-                            Text(taskTypeLabel(task.type))
-                                .font(.caption2)
-                                .padding(.horizontal, 6).padding(.vertical, 1)
-                                .foregroundStyle(tagColor(task.type))
-                                .background(tagColor(task.type).opacity(0.12))
-                                .clipShape(Capsule())
-                            Text(comp.map { timeKey($0.at) + " 完成" } ?? task.time)
-                                .font(.caption2).foregroundStyle(CoveyTheme.ink3)
-                            if let comp { Text("· \(store.memberName(comp.by))").font(.caption2).foregroundStyle(CoveyTheme.ink3) }
-                        }
-                    }
-                    Spacer()
-                }
-                .padding(10)
-                .background(.white)
-                .overlay(RoundedRectangle(cornerRadius: 14).stroke(CoveyTheme.line))
-                .clipShape(RoundedRectangle(cornerRadius: 14))
-            }
-        }
-        .padding(14)
-        .background(CoveyTheme.card)
-        .overlay(RoundedRectangle(cornerRadius: 18).stroke(CoveyTheme.line))
-        .clipShape(RoundedRectangle(cornerRadius: 18))
-    }
-
     private var insightGrid: some View {
-        let week = store.weekStats()
+        let weekCount = store.weekEntryCount()
         let due = store.remindersDueSoon().count
         let lastW = store.data.weights.last
         let daysW: Int? = lastW.map { Calendar.current.dateComponents([.day], from: dateFormatterCN.date(from: $0.date) ?? Date(), to: Date()).day ?? 0 }
@@ -199,10 +134,10 @@ struct TodayView: View {
             weightLabel = "最近体重 · \(d == 0 ? "今天" : "\(d) 天前") 记录"
         }
         return LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-            insightTile(value: "\(week.rate)%", label: "近 7 天照护完成率（\(week.done)/\(week.total)）")
-            insightTile(value: "\(due)", label: "7 天内待办提醒")
+            insightTile(value: "\(weekCount)", label: "近 7 天记录")
+            insightTile(value: store.data.remindersEnabled ? "\(due)" : "已关闭", label: "7 天内待办提醒")
             insightTile(value: weightValue, label: weightLabel)
-            insightTile(value: "\(store.data.weights.count)", label: "体重记录次数")
+            insightTile(value: "\(store.data.entries.count)", label: "累计记录")
         }
     }
 
@@ -270,7 +205,7 @@ struct TodayView: View {
             HStack {
                 Text("Pawly 的观察").font(.headline)
                 Spacer()
-                Button { NotificationCenter.default.post(name: .askAI, object: "请根据我家宠物\(store.data.pet.name)最近的照护记录和待办提醒，给我 3 条简短、可执行的建议。") } label: {
+                Button { NotificationCenter.default.post(name: .askAI, object: "请根据我家宠物\(store.data.pet.name)最近的记录和待办提醒，给我 3 条简短、可执行的建议。") } label: {
                     Label("让 AI 分析", systemImage: "wand.and.stars")
                         .font(.caption).foregroundStyle(CoveyTheme.accent)
                 }
@@ -284,17 +219,17 @@ struct TodayView: View {
     }
 
     private func ruleInsight() -> String {
-        let week = store.weekStats()
         var parts: [String] = []
-        if week.rate >= 80 { parts.append("这周照护完成率 \(week.rate)%，状态不错。") }
-        else if week.total > 0 { parts.append("这周照护完成率 \(week.rate)%，可以留意漏掉的环节。") }
-        let due = store.remindersDueSoon().count
-        if due > 0 { parts.append("\(due) 件提醒在 7 天内到期。") }
-        if let lastW = store.data.weights.last {
-            let days = Calendar.current.dateComponents([.day], from: dateFormatterCN.date(from: lastW.date) ?? Date(), to: Date()).day ?? 0
-            if days > 30 { parts.append("体重已经 \(days) 天没记录了。") }
+        let weekCount = store.weekEntryCount()
+        if weekCount > 0 { parts.append("这周记了 \(weekCount) 条日常。") }
+        if store.data.remindersEnabled {
+            let due = store.remindersDueSoon().count
+            if due > 0 { parts.append("\(due) 件提醒在 7 天内到期。") }
         }
-        if parts.isEmpty { return "记录越多，我越能给出有依据的建议。先完成今天的照护吧。" }
+        if store.data.weights.isEmpty {
+            parts.append("还没有体重记录，记一次可以留意变化。")
+        }
+        if parts.isEmpty { return "记录越多，我越能给出有依据的建议。先记下今天的日常吧。" }
         return parts.joined()
     }
 
@@ -373,6 +308,7 @@ struct TodayView: View {
 
 extension Notification.Name {
     static let askAI = Notification.Name("covey.askAI")
+    static let switchTab = Notification.Name("covey.switchTab")
 }
 
 // MARK: - 记录行组件（今日预览 & 手账共用）

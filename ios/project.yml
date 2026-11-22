@@ -22,3 +22,26 @@ targets:
       PRODUCT_BUNDLE_IDENTIFIER: com.bolerat.covey
       SWIFT_VERSION: "5.9"
       TARGETED_DEVICE_FAMILY: "1"
+  CoveyUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - UITests
+    dependencies:
+      - target: Covey
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.bolerat.covey.uitests
+      SWIFT_VERSION: "5.9"
+      GENERATE_INFOPLIST_FILE: YES
+schemes:
+  Covey:
+    build:
+      targets:
+        Covey: all
+        CoveyUITests: [test]
+    run:
+      config: Debug
+    test:
+      targets:
+        - CoveyUITests
