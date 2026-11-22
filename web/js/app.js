@@ -1,11 +1,10 @@
 // 同窝 Covey · 应用入口与页面渲染
 import {
-  loadState, saveState, defaultState, resetState, defaultTasks,
-  TASK_TYPES, ENTRY_TYPES, REMINDER_CATEGORIES, AI_PROVIDERS, SPECIES,
+  loadState, saveState, defaultState, resetState,
+  ENTRY_TYPES, REMINDER_CATEGORIES, AI_PROVIDERS, AI_TONES, SPECIES,
   todayKey, dateKeyOf, fmtDateCN, fmtFullDate, timeKeyOf,
   uid, memberName, avatarColor,
-  isTaskDone, completeTask, undoTask, careProgress, todayCompletions,
-  careStreak, weekStats, remindersDueSoon,
+  remindersDueSoon, weekEntryCount, recordStreak,
   lastWeight, daysSinceWeight, exportJSON,
 } from './store.js';
 import { testConnection, chatOnce, buildSystemPrompt } from './ai.js';
@@ -48,33 +47,21 @@ function renderToday() {
   const pet = state.pet;
   const now = new Date();
   const dateCN = `${now.getMonth() + 1}月${now.getDate()}日 ${['周日', '周一', '周二', '周三', '周四', '周五', '周六'][now.getDay()]}`;
-  const { done, total } = careProgress(state);
-  const streak = careStreak(state);
-  const week = weekStats(state);
+  const todayCount = state.entries.filter((e) => dateKeyOf(new Date(e.ts)) === todayKey()).length;
+  const streak = recordStreak(state);
+  const weekCount = weekEntryCount(state);
   const reminders = remindersDueSoon(state, 7);
   const lastW = lastWeight(state);
 
-  const allDone = total > 0 && done === total;
+  const goal = 3;
+  const ringRatio = Math.min(todayCount / goal, 1);
+  const allDone = todayCount >= goal;
   const heroCirc = 2 * Math.PI * 42;
-  const heroOffset = heroCirc * (1 - (total ? done / total : 0));
+  const heroOffset = heroCirc * (1 - ringRatio);
   const speciesInfo = SPECIES[pet.species] || SPECIES.other;
   const age = pet.birthday ? ageText(pet.birthday) : '';
   const petTags = [speciesInfo.label, pet.breed, age].filter(Boolean);
   const heroWeight = lastW ? lastW.kg : pet.weight;
-
-  const taskRows = state.tasks.map((t) => {
-    const finished = isTaskDone(state, t.id);
-    const comp = todayCompletions(state)[t.id];
-    const typeInfo = TASK_TYPES[t.type] || {};
-    const timeLabel = comp ? `${timeKeyOf(new Date(comp.at))} 完成` : t.time;
-    return `<li class="task ${finished ? 'done' : ''}">
-      <button class="check" type="button" data-action="toggle-task" data-id="${t.id}" aria-pressed="${finished}" aria-label="${finished ? '撤销' : '完成'}：${esc(t.title)}">${icon('i-check')}</button>
-      <div class="task-main">
-        <div class="task-title">${esc(t.title)}</div>
-        <div class="task-meta"><span class="tag ${typeInfo.tagClass || ''}">${typeInfo.label || ''}</span><span>${timeLabel}</span>${comp ? `<span>· ${esc(memberName(state, comp.by))}</span>` : ''}</div>
-      </div>
-    </li>`;
-  }).join('');
 
   const reminderRows = reminders.slice(0, 3).map((r) => {
     const cat = REMINDER_CATEGORIES[r.category] || '提醒';
@@ -102,7 +89,7 @@ function renderToday() {
               <circle class="fg-ring" cx="46" cy="46" r="42" stroke-dasharray="${heroCirc.toFixed(1)}" stroke-dashoffset="${heroOffset.toFixed(1)}"></circle>
             </svg>
             <div class="pet-face">${icon(speciesInfo.icon)}</div>
-            <span class="pet-badge">${icon(allDone ? 'i-check' : 'i-paw')}${done}/${total}</span>
+            <span class="pet-badge">${icon(allDone ? 'i-check' : 'i-note')}${todayCount}</span>
           </div>
           <div class="pet-id">
             <h1>${esc(pet.name)}</h1>
@@ -111,8 +98,8 @@ function renderToday() {
           </div>
         </div>
         <div class="pet-stats">
-          <div class="pet-stat"><div class="v"><i class="accent">${icon('i-heart')}</i>${streak}<small>天</small></div><div class="l">连续照顾</div></div>
-          <div class="pet-stat"><div class="v"><i class="sage">${icon('i-chart')}</i>${week.rate}<small>%</small></div><div class="l">近 7 天完成</div></div>
+          <div class="pet-stat"><div class="v"><i class="accent">${icon('i-heart')}</i>${streak}<small>天</small></div><div class="l">连续记录</div></div>
+          <div class="pet-stat"><div class="v"><i class="sage">${icon('i-chart')}</i>${weekCount}<small>条</small></div><div class="l">近 7 天记录</div></div>
           <div class="pet-stat"><div class="v"><i class="blue">${icon('i-health')}</i>${heroWeight ? `${heroWeight}<small>kg</small>` : '—'}</div><div class="l">体重</div></div>
         </div>
       </div>
@@ -123,19 +110,14 @@ function renderToday() {
         <button class="quick-btn" type="button" data-action="ask-ai-today">${icon('i-wand')}<span>AI 建议</span></button>
       </div>
 
-      <div class="card">
-        <div class="card-head"><h2>今日照护</h2><span class="care-count">${done}/${total}</span></div>
-        <div class="care-bar"><span style="width:${total ? (done / total) * 100 : 0}%"></span></div>
-        <ul class="task-list">${taskRows}</ul>
-      </div>
-
+      ${state.remindersEnabled ? `
       <div class="card">
         <div class="card-head">
-          <h2>照护提醒</h2>
+          <h2>提醒</h2>
           <button class="more" type="button" data-action="open-reminder-form">+ 新建</button>
         </div>
         ${reminderRows || emptyHTML('近期没有待办提醒，疫苗、驱虫、洗护都可以记在这里')}
-      </div>
+      </div>` : ''}
 
       <div class="card">
         <div class="card-head">
@@ -146,20 +128,20 @@ function renderToday() {
       </div>
 
       <div class="section-head"><h2>最新记录</h2><button class="more" type="button" data-action="nav" data-route="journal">查看全部</button></div>
-      ${recentEntries || emptyHTML('还没有记录，完成照护或记一笔后会出现在这里')}
+      ${recentEntries || emptyHTML('记一笔或拍照后会出现在这里')}
     </section>`;
 }
 
 function ruleInsight(state) {
-  const week = weekStats(state);
+  const weekCount = weekEntryCount(state);
   const due = remindersDueSoon(state, 7).length;
   const daysW = daysSinceWeight(state);
   const parts = [];
-  if (week.rate >= 80) parts.push(`这周照护完成率 ${week.rate}%，状态不错。`);
-  else if (week.total > 0) parts.push(`这周照护完成率 ${week.rate}%，可以留意漏掉的环节。`);
-  if (due > 0) parts.push(`${due} 件提醒在 7 天内到期。`);
-  if (daysW != null && daysW > 30) parts.push(`体重已经 ${daysW} 天没记录了。`);
-  if (!parts.length) parts.push('记录越多，我越能给出有依据的建议。先完成今天的照护吧。');
+  if (weekCount > 0) parts.push(`这周记了 ${weekCount} 条日常。`);
+  if (state.remindersEnabled && due > 0) parts.push(`${due} 件提醒在 7 天内到期。`);
+  if (daysW == null) parts.push('还没有体重记录，记一次可以留意变化。');
+  else if (daysW > 30) parts.push(`体重已经 ${daysW} 天没记录了。`);
+  if (!parts.length) parts.push('记下今天的日常，我就能给出更有依据的建议。');
   return parts.join('');
 }
 
@@ -188,14 +170,14 @@ function renderJournal() {
   return `
     <section>
       <h1 class="page-title">记录手账</h1>
-      <p class="page-sub">照护、照片、花费和健康，都按时间存好。</p>
+      <p class="page-sub">照片、花费、健康和日常，都按时间存好。</p>
       <label class="card" style="display:flex;align-items:center;gap:10px;padding:12px 14px">
         ${icon('i-cal')}
         <input id="journalSearch" type="search" placeholder="搜索记录内容" value="${esc(journalQuery)}" style="flex:1;border:0;outline:none;background:transparent;font-size:14px" aria-label="搜索记录">
       </label>
       <div class="filters" id="journalFilters">
-        ${['all', 'photo', 'spend', 'care', 'health', 'note'].map((f) => {
-          const labels = { all: '全部', photo: '照片', spend: '花费', care: '照护', health: '健康', note: '日常' };
+        ${['all', 'photo', 'spend', 'health', 'note'].map((f) => {
+          const labels = { all: '全部', photo: '照片', spend: '花费', health: '健康', note: '日常' };
           return `<button type="button" data-action="journal-filter" data-value="${f}" class="${journalFilter === f ? 'active' : ''}">${labels[f]}</button>`;
         }).join('')}
       </div>
@@ -262,7 +244,7 @@ function renderPet() {
 
       <div class="card">
         <div class="card-head"><h2>家庭成员</h2><button class="more" type="button" data-action="add-member">+ 添加</button></div>
-        <p class="muted small" style="margin:0 0 8px">成员仅保存在本机，用于区分谁完成了照护。</p>
+        <p class="muted small" style="margin:0 0 8px">成员仅保存在本机，用于区分谁记了记录。</p>
         ${state.members.map((m) => `
           <div class="weight-row">
             <span>${esc(m.name)}${m.id === state.activeMember ? ' <span class="tag">当前</span>' : ''}</span>
@@ -290,14 +272,17 @@ function renderMe() {
   const ai = state.ai;
   const providerOptions = Object.entries(AI_PROVIDERS).map(([key, p]) =>
     `<option value="${key}" ${ai.provider === key ? 'selected' : ''}>${p.label}</option>`).join('');
+  const toneOptions = Object.entries(AI_TONES).map(([key, t]) =>
+    `<option value="${key}" ${ai.tone === key ? 'selected' : ''}>${t.label}</option>`).join('');
+  const speciesLabel = SPECIES[state.pet.species]?.label || '其他';
 
   return `
     <section>
-      <h1 class="page-title">我的</h1>
-      <p class="page-sub">AI 配置、数据与本地存储。</p>
+      <h1 class="page-title">设置</h1>
+      <p class="page-sub">AI 助手、提醒、数据与本地存储。</p>
 
       <div class="card set-card">
-        <div class="card-head"><h2>AI 助手设置</h2></div>
+        <div class="card-head"><h2>AI 助手</h2></div>
         <div class="field">
           <label>服务商</label>
           <select id="aiProvider">${providerOptions}</select>
@@ -314,6 +299,10 @@ function renderMe() {
           <label>模型</label>
           <input id="aiModel" type="text" value="${esc(ai.model)}" placeholder="gpt-4o-mini" autocomplete="off">
         </div>
+        <div class="field">
+          <label>AI 语气</label>
+          <select id="aiTone">${toneOptions}</select>
+        </div>
         <p class="muted small">配置只保存在本机浏览器。若接口不支持浏览器跨域访问，请填入支持 CORS 的代理地址。</p>
         <div class="form-actions">
           <button class="btn secondary" type="button" data-action="ai-test">测试连接</button>
@@ -323,7 +312,32 @@ function renderMe() {
       </div>
 
       <div class="card">
-        <div class="card-head"><h2>数据</h2></div>
+        <div class="card-head"><h2>提醒</h2></div>
+        <div class="set-row">
+          <div><div class="set-label">Pawly 提醒</div><div class="set-sub">开启后「今日」页显示 7 天内到期的提醒</div></div>
+          <button class="btn secondary" type="button" data-action="reminders-toggle">${state.remindersEnabled ? '已开启' : '已关闭'}</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>宠物与亲友</h2></div>
+        <div class="set-row">
+          <div><div class="set-label">宠物档案</div><div class="set-sub">${esc(state.pet.name)} · ${speciesLabel}</div></div>
+          <button class="btn secondary" type="button" data-action="goto-pet">打开</button>
+        </div>
+        <div class="set-row">
+          <div><div class="set-label">家庭成员</div><div class="set-sub">${state.members.length} 位成员，本机保存</div></div>
+          <button class="btn secondary" type="button" data-action="goto-pet">打开</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>Pawly 的记忆</h2></div>
+        <p class="muted small" style="margin:0">AI 回答时会读取：宠物档案、最近 15 条记录、近 14 天每天的记录数量、体重、待办提醒和最近 20 条对话。这些只在你配置了 API 后发送给对应的 AI 服务。</p>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>数据与隐私</h2></div>
         <div class="set-row">
           <div><div class="set-label">导出数据</div><div class="set-sub">下载全部记录为 JSON 文件</div></div>
           <button class="btn secondary" type="button" data-action="export-data">导出</button>
@@ -673,14 +687,11 @@ function openProfileForm() {
       const name = (m.querySelector('#mPetName').value || '').trim();
       if (!name) { toast('请填写名字'); return; }
       const species = m.querySelector('#mPetSpecies').value;
-      const oldSpecies = state.pet.species;
       state.pet.name = name;
       state.pet.species = species;
       state.pet.breed = (m.querySelector('#mPetBreed').value || '').trim();
       state.pet.birthday = m.querySelector('#mPetBirthday').value || '';
       state.pet.weight = m.querySelector('#mPetWeight').value || '';
-      // 物种变化时同步默认照护任务
-      if (species !== oldSpecies) state.tasks = defaultTasks(species);
       persist(); closeModal(); refresh(); toast('档案已保存');
     },
   });
@@ -789,6 +800,7 @@ function readAiForm() {
     baseUrl: document.getElementById('aiBaseUrl')?.value ?? state.ai.baseUrl,
     apiKey: document.getElementById('aiApiKey')?.value ?? state.ai.apiKey,
     model: document.getElementById('aiModel')?.value ?? state.ai.model,
+    tone: document.getElementById('aiTone')?.value ?? state.ai.tone ?? 'warm',
   };
 }
 
@@ -823,17 +835,8 @@ function handleAction(action, el) {
     case 'nav': navigate(el.dataset.route); break;
     case 'goto-pet': navigate('pet'); break;
     case 'goto-me': navigate('me'); break;
-    case 'toggle-task': {
-      const id = el.dataset.id;
-      if (isTaskDone(state, id)) undoTask(state, id);
-      else completeTask(state, id);
-      persist(); refresh();
-      break;
-    }
-    case 'quick-photo': pickPhoto(); break;
-    case 'quick-note': openNoteModal(); break;
     case 'ask-ai-today':
-      pendingAiPrompt = `请根据我家宠物${state.pet.name}最近的照护记录和待办提醒，给我 3 条简短、可执行的建议。`;
+      pendingAiPrompt = `请根据我家宠物${state.pet.name}最近的记录和待办提醒，给我 3 条简短、可执行的建议。`;
       navigate('ai');
       break;
     case 'ai-quick': sendAi(el.dataset.q); {
@@ -846,6 +849,8 @@ function handleAction(action, el) {
       if (input) { sendAi(input.value); input.value = ''; }
       break;
     }
+    case 'quick-photo': pickPhoto(); break;
+    case 'quick-note': openNoteModal(); break;
     case 'open-entry': openEntryModal(el.dataset.id); break;
     case 'view-photo': openLightbox(el.dataset.src, '照片'); break;
     case 'journal-filter': journalFilter = el.dataset.value; refresh(); break;
@@ -866,6 +871,11 @@ function handleAction(action, el) {
     case 'switch-member': {
       state.activeMember = el.dataset.id;
       persist(); refresh(); toast(`已切换到${memberName(state, state.activeMember)}`);
+      break;
+    }
+    case 'reminders-toggle': {
+      state.remindersEnabled = !state.remindersEnabled;
+      persist(); refresh();
       break;
     }
     case 'ai-save': {

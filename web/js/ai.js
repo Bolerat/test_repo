@@ -1,5 +1,5 @@
 // 同窝 Covey · AI 助手（OpenAI 兼容 chat/completions 接口）
-import { SPECIES, REMINDER_CATEGORIES } from './store.js';
+import { SPECIES, REMINDER_CATEGORIES, AI_TONES, ENTRY_TYPES } from './store.js';
 
 function normalizeBaseUrl(url) {
   return String(url || '').trim().replace(/\/+$/, '');
@@ -75,28 +75,31 @@ function dateKeyOf(ts) {
 export function buildSystemPrompt(state) {
   const pet = state.pet;
   const speciesLabel = SPECIES[pet.species]?.label || pet.species;
+  const toneHint = AI_TONES[state.ai?.tone]?.hint || AI_TONES.warm.hint;
   const lines = [
-    '你是「同窝 Covey」里的宠物照护助手，名字叫 Pawly。你陪伴用户照顾家里的宠物。',
-    '说话用简体中文，语气温暖、简洁、像懂宠物的朋友。回答控制在 150 字以内，除非用户要求详细。',
-    '建议要有依据（引用记录或常识），并说明不确定的地方；最终决定权在用户，不要替用户做医疗诊断，涉及生病就建议就医。',
+    `你是「同窝 Covey」里的宠物伙伴助手，名字叫 Pawly。你和用户一起生活，熟悉家里的宠物${pet.name}，像一个经常来往的朋友。`,
+    '说话像真人：自然、简短、有温度。避免“根据记录显示”“综上所述”“希望对你有帮助”这类机器腔；不要用生硬的列表腔，除非用户要求详细。',
+    '回答一般几句话说清，可以有一点个人感受，但不过度卖萌。建议要有依据（引用记录或常识），不确定就直说。不替用户做医疗诊断，涉及生病就建议就医。',
+    `语气：${toneHint}。`,
     '',
     `宠物档案：名字「${pet.name}」，物种：${speciesLabel}${pet.breed ? '，品种：' + pet.breed : ''}${pet.birthday ? '，生日：' + pet.birthday : ''}${pet.weight ? '，体重：' + pet.weight + 'kg' : '，体重未知'}。`,
   ];
 
-  // 最近 14 天照护完成情况
+  // 最近 14 天每天的记录概况
   const stats = [];
   for (let i = 13; i >= 0; i--) {
     const d = new Date();
     d.setDate(d.getDate() - i);
     const key = dateKeyOf(d.getTime());
-    const comp = state.completions[key] || {};
-    const done = state.tasks.filter((t) => comp[t.id]).length;
+    const dayEntries = state.entries.filter((e) => dateKeyOf(new Date(e.ts)) === key);
     const p = (n) => String(n).padStart(2, '0');
     const label = `${p(d.getMonth() + 1)}-${p(d.getDate())}`;
-    const names = state.tasks.filter((t) => comp[t.id]).map((t) => t.title).join('、') || '无';
-    stats.push(`${label}：${done}/${state.tasks.length}（${names}）`);
+    const summary = dayEntries.length
+      ? [...new Set(dayEntries.map((e) => ENTRY_TYPES[e.type]?.label || e.type))].join('、')
+      : '无';
+    stats.push(`${label}：${dayEntries.length} 条（${summary}）`);
   }
-  lines.push('', '近 14 天照护记录：', ...stats);
+  lines.push('', '近 14 天记录概况：', ...stats);
 
   // 最近记录
   const recent = state.entries.slice(0, 15).map((e) => {
