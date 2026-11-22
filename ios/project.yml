@@ -1,0 +1,24 @@
+name: Covey
+options:
+  bundleIdPrefix: com.bolerat
+targets:
+  Covey:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - Sources
+    info:
+      path: Info.plist
+      properties:
+        CFBundleName: Covey
+        CFBundleDisplayName: 同窝
+        UILaunchScreen_Generation: true
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        NSCameraUsageDescription: 拍摄宠物照片记录日常
+        NSPhotoLibraryAddUsageDescription: 保存宠物照片
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.bolerat.covey
+      SWIFT_VERSION: "5.9"
+      TARGETED_DEVICE_FAMILY: "1"
