@@ -1,17 +1,8 @@
 plugins {
     id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.compose'
 }
-
-dependencies {
-    implementation 'androidx.webkit:webkit:1.12.1'
-}
-
-// 打包前把网页版同步进 assets，web/ 是唯一数据源
-task syncWebAssets(type: Copy) {
-    from rootProject.file('../web')
-    into 'src/main/assets/www'
-}
-tasks.named('preBuild') { dependsOn 'syncWebAssets' }
 
 android {
     namespace 'com.bolerat.covey'
@@ -19,10 +10,10 @@ android {
 
     defaultConfig {
         applicationId 'com.bolerat.covey'
-        minSdk 24
+        minSdk 26
         targetSdk 34
-        versionCode 1
-        versionName '1.0'
+        versionCode 2
+        versionName '1.1'
     }
 
     buildTypes {
@@ -30,4 +21,24 @@ android {
             minifyEnabled false
         }
     }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions { jvmTarget = '17' }
+
+    buildFeatures { compose true }
+}
+
+dependencies {
+    def composeBom = platform('androidx.compose:compose-bom:2024.09.03')
+    implementation composeBom
+    implementation 'androidx.activity:activity-compose:1.9.2'
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.ui:ui-tooling-preview'
+    implementation 'androidx.compose.material3:material3'
+    implementation 'androidx.compose.material:material-icons-extended'
+    implementation 'androidx.core:core-ktx:1.13.1'
+    debugImplementation 'androidx.compose.ui:ui-tooling'
 }
