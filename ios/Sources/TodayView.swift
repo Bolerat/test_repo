@@ -19,7 +19,6 @@ struct TodayView: View {
                     hero
                     quickRow
                     careCard
-                    insightGrid
                     reminderCard
                     pawlyCard
                     recentSection
@@ -59,25 +58,141 @@ struct TodayView: View {
     }
 
     private var hero: some View {
-        HStack(alignment: .center) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(weekdayCN(Date()))
-                    .font(.subheadline)
-                    .foregroundStyle(CoveyTheme.ink2)
-                Text("\(store.data.pet.name)的日常")
-                    .font(.title.bold())
+        let pet = store.data.pet
+        let prog = store.careProgress()
+        let week = store.weekStats()
+        let weight = store.data.weights.last.map { formatKg($0.kg) } ?? (pet.weight.isEmpty ? nil : pet.weight)
+        return VStack(spacing: 16) {
+            HStack(spacing: 16) {
+                petAvatar(done: prog.done, total: prog.total)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(pet.name)
+                        .font(.system(size: 30, weight: .bold, design: .rounded))
+                        .foregroundStyle(CoveyTheme.ink)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                    HStack(spacing: 6) {
+                        ForEach(petTags, id: \.self) { tag in
+                            Text(tag)
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(CoveyTheme.ink2)
+                                .padding(.horizontal, 8).padding(.vertical, 3)
+                                .background(.white.opacity(0.75))
+                                .clipShape(Capsule())
+                        }
+                    }
+                    Label(weekdayCN(Date()), systemImage: "calendar")
+                        .font(.caption)
+                        .foregroundStyle(CoveyTheme.ink3)
+                }
+                Spacer(minLength: 0)
             }
-            Spacer()
-            HStack(spacing: 4) {
-                Image(systemName: "heart.fill").font(.caption)
-                Text("连续照顾 \(store.careStreak()) 天").font(.caption.bold())
+            HStack(spacing: 0) {
+                heroStat(symbol: "flame.fill", color: CoveyTheme.accent, value: "\(store.careStreak())", unit: "天", label: "连续照顾")
+                heroDivider
+                heroStat(symbol: "chart.bar.fill", color: CoveyTheme.sage, value: "\(week.rate)", unit: "%", label: "近 7 天完成")
+                heroDivider
+                heroStat(symbol: "scalemass.fill", color: CoveyTheme.blue, value: weight ?? "—", unit: weight == nil ? "" : "kg", label: "体重")
             }
-            .foregroundStyle(Color(hex: 0x8A6A1F))
-            .padding(.horizontal, 10).padding(.vertical, 6)
-            .background(CoveyTheme.goldSoft)
-            .clipShape(Capsule())
+            .padding(.vertical, 12)
+            .background(.white.opacity(0.72))
+            .clipShape(RoundedRectangle(cornerRadius: 16))
         }
+        .padding(16)
+        .background(heroBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 24))
         .padding(.top, 8)
+    }
+
+    private var heroBackground: some View {
+        ZStack {
+            LinearGradient(colors: [CoveyTheme.accentSoft, CoveyTheme.goldSoft], startPoint: .topLeading, endPoint: .bottomTrailing)
+            Image(systemName: "pawprint.fill")
+                .font(.system(size: 120))
+                .foregroundStyle(.white.opacity(0.45))
+                .rotationEffect(.degrees(-24))
+                .offset(x: 130, y: -50)
+            Image(systemName: "pawprint.fill")
+                .font(.system(size: 44))
+                .foregroundStyle(.white.opacity(0.4))
+                .rotationEffect(.degrees(18))
+                .offset(x: 60, y: 10)
+        }
+    }
+
+    private func petAvatar(done: Int, total: Int) -> some View {
+        let ratio = total == 0 ? 0 : CGFloat(done) / CGFloat(total)
+        return ZStack {
+            Circle().fill(.white)
+            Image(systemName: speciesSymbol)
+                .font(.system(size: 36))
+                .foregroundStyle(CoveyTheme.accent)
+            Circle().stroke(.white.opacity(0.7), lineWidth: 6).padding(-6)
+            Circle()
+                .trim(from: 0, to: ratio)
+                .stroke(done == total && total > 0 ? CoveyTheme.sage : CoveyTheme.accent,
+                        style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+                .padding(-6)
+                .animation(.easeOut(duration: 0.4), value: ratio)
+        }
+        .frame(width: 76, height: 76)
+        .padding(6)
+        .overlay(alignment: .bottom) {
+            HStack(spacing: 3) {
+                Image(systemName: done == total && total > 0 ? "checkmark" : "pawprint.fill")
+                Text("\(done)/\(total)")
+            }
+            .font(.caption2.bold())
+            .foregroundStyle(.white)
+            .padding(.horizontal, 8).padding(.vertical, 3)
+            .background(done == total && total > 0 ? CoveyTheme.sage : CoveyTheme.accent)
+            .clipShape(Capsule())
+            .overlay(Capsule().stroke(.white, lineWidth: 2))
+            .offset(y: 8)
+        }
+    }
+
+    private func heroStat(symbol: String, color: Color, value: String, unit: String, label: String) -> some View {
+        VStack(spacing: 4) {
+            HStack(alignment: .firstTextBaseline, spacing: 2) {
+                Image(systemName: symbol).font(.caption).foregroundStyle(color)
+                Text(value).font(.system(.title3, design: .rounded).bold()).foregroundStyle(CoveyTheme.ink)
+                if !unit.isEmpty { Text(unit).font(.caption2.bold()).foregroundStyle(CoveyTheme.ink2) }
+            }
+            Text(label).font(.caption2).foregroundStyle(CoveyTheme.ink3)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var heroDivider: some View {
+        Rectangle().fill(CoveyTheme.line).frame(width: 1, height: 28)
+    }
+
+    private var speciesSymbol: String {
+        switch store.data.pet.species {
+        case "cat": return "cat.fill"
+        case "dog": return "dog.fill"
+        case "rabbit": return "hare.fill"
+        default: return "pawprint.fill"
+        }
+    }
+
+    private var petTags: [String] {
+        let pet = store.data.pet
+        var tags: [String] = []
+        if let label = speciesOptions.first(where: { $0.key == pet.species })?.label { tags.append(label) }
+        if !pet.breed.isEmpty { tags.append(pet.breed) }
+        if let birth = dateFormatterCN.date(from: pet.birthday) {
+            let age = Calendar.current.dateComponents([.year, .month], from: birth, to: Date())
+            if let y = age.year, y > 0 { tags.append("\(y) 岁") }
+            else if let m = age.month, m >= 0 { tags.append("\(max(m, 1)) 个月") }
+        }
+        return tags
+    }
+
+    private func formatKg(_ kg: Double) -> String {
+        kg == kg.rounded() ? String(Int(kg)) : String(format: "%.1f", kg)
     }
 
     private var petChip: some View {
@@ -127,21 +242,19 @@ struct TodayView: View {
     private var careCard: some View {
         let prog = store.careProgress()
         return VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 12) {
-                ZStack {
-                    Circle().stroke(CoveyTheme.line, lineWidth: 5)
-                    Circle()
-                        .trim(from: 0, to: prog.total == 0 ? 0 : CGFloat(prog.done) / CGFloat(prog.total))
-                        .stroke(CoveyTheme.accent, style: StrokeStyle(lineWidth: 5, lineCap: .round))
-                        .rotationEffect(.degrees(-90))
-                }
-                .frame(width: 44, height: 44)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("\(prog.done) / \(prog.total) 今日照护").font(.subheadline.bold())
-                    Text(prog.done == prog.total && prog.total > 0 ? "今天照顾得很到位" : "完成一件是一件")
-                        .font(.caption).foregroundStyle(CoveyTheme.ink2)
+            HStack {
+                Text("今日照护").font(.headline)
+                Spacer()
+                Text("\(prog.done)/\(prog.total)").font(.subheadline.bold()).foregroundStyle(CoveyTheme.accent)
+            }
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(CoveyTheme.line)
+                    Capsule().fill(CoveyTheme.accent)
+                        .frame(width: prog.total == 0 ? 0 : geo.size.width * CGFloat(prog.done) / CGFloat(prog.total))
                 }
             }
+            .frame(height: 6)
             ForEach(store.data.tasks) { task in
                 let done = store.isTaskDone(task.id)
                 let comp = store.data.completions[dateKey()]?[task.id]
@@ -186,36 +299,6 @@ struct TodayView: View {
         .background(CoveyTheme.card)
         .overlay(RoundedRectangle(cornerRadius: 18).stroke(CoveyTheme.line))
         .clipShape(RoundedRectangle(cornerRadius: 18))
-    }
-
-    private var insightGrid: some View {
-        let week = store.weekStats()
-        let due = store.remindersDueSoon().count
-        let lastW = store.data.weights.last
-        let daysW: Int? = lastW.map { Calendar.current.dateComponents([.day], from: dateFormatterCN.date(from: $0.date) ?? Date(), to: Date()).day ?? 0 }
-        let weightValue = lastW.map { "\($0.kg) kg" } ?? "—"
-        var weightLabel = "还没有体重记录"
-        if let d = daysW {
-            weightLabel = "最近体重 · \(d == 0 ? "今天" : "\(d) 天前") 记录"
-        }
-        return LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-            insightTile(value: "\(week.rate)%", label: "近 7 天照护完成率（\(week.done)/\(week.total)）")
-            insightTile(value: "\(due)", label: "7 天内待办提醒")
-            insightTile(value: weightValue, label: weightLabel)
-            insightTile(value: "\(store.data.weights.count)", label: "体重记录次数")
-        }
-    }
-
-    private func insightTile(value: String, label: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(value).font(.title3.bold())
-            Text(label).font(.caption2).foregroundStyle(CoveyTheme.ink2)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(CoveyTheme.card)
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(CoveyTheme.line))
-        .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 
     private var reminderCard: some View {
