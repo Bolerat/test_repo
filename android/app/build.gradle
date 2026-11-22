@@ -1,0 +1,33 @@
+plugins {
+    id 'com.android.application'
+}
+
+dependencies {
+    implementation 'androidx.webkit:webkit:1.12.1'
+}
+
+// 打包前把网页版同步进 assets，web/ 是唯一数据源
+task syncWebAssets(type: Copy) {
+    from rootProject.file('../web')
+    into 'src/main/assets/www'
+}
+tasks.named('preBuild') { dependsOn 'syncWebAssets' }
+
+android {
+    namespace 'com.bolerat.covey'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'com.bolerat.covey'
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName '1.0'
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+}

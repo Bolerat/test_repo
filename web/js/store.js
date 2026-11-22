@@ -2,14 +2,6 @@
 
 const LS_KEY = 'covey-state-v1';
 
-export const TASK_TYPES = {
-  feeding: { label: '喂食', tagClass: 'feeding' },
-  water: { label: '换水', tagClass: 'water' },
-  clean: { label: '清洁', tagClass: 'clean' },
-  walk: { label: '遛弯', tagClass: 'walk' },
-  companion: { label: '陪伴', tagClass: 'companion' },
-};
-
 export const ENTRY_TYPES = {
   care: { label: '照护', icon: 'i-check', tagClass: 'care' },
   note: { label: '日常', icon: 'i-note', tagClass: 'note' },
@@ -34,6 +26,14 @@ export const AI_PROVIDERS = {
   custom: { label: '自定义（OpenAI 兼容）', baseUrl: '', model: '' },
 };
 
+// Pawly 的语气选项：hint 会注入系统提示词
+export const AI_TONES = {
+  warm: { label: '温暖陪伴', hint: '像家人一样自然关心，语气温和，不说教' },
+  lively: { label: '活泼俏皮', hint: '轻松幽默，可以偶尔用 emoji，但不过分' },
+  concise: { label: '简洁利落', hint: '直奔重点，少寒暄，先给答案' },
+  calm: { label: '冷静专业', hint: '条理清晰，先结论后依据，语气平稳' },
+};
+
 export const SPECIES = {
   cat: { label: '猫', icon: 'i-cat' },
   dog: { label: '狗', icon: 'i-dog' },
@@ -42,20 +42,6 @@ export const SPECIES = {
 };
 
 const AVATAR_COLORS = ['#d96f4e', '#6f8f5f', '#5b7fa6', '#c99a3f', '#9b6b8f', '#4e8f8a'];
-
-export function defaultTasks(species) {
-  const base = [
-    { id: 'breakfast', title: '早餐', type: 'feeding', time: '07:30' },
-    { id: 'water', title: '换水', type: 'water', time: '12:00' },
-    { id: 'dinner', title: '晚餐', type: 'feeding', time: '18:30' },
-  ];
-  const evening = species === 'dog'
-    ? { id: 'walk', title: '遛弯', type: 'walk', time: '20:00' }
-    : species === 'cat'
-      ? { id: 'litter', title: '清理猫砂', type: 'clean', time: '20:00' }
-      : { id: 'play', title: '陪伴玩耍', type: 'companion', time: '20:00' };
-  return [...base, evening];
-}
 
 export function defaultState() {
   return {
@@ -69,12 +55,11 @@ export function defaultState() {
     },
     activeMember: 'me',
     members: [{ id: 'me', name: '我', role: 'owner' }],
-    tasks: defaultTasks('cat'),
-    completions: {},   // { 'YYYY-MM-DD': { taskId: { by, at } } }
-    entries: [],       // { id, ts, type, text, photo, amount, by, taskId }
+    entries: [],       // { id, ts, type, text, photo, amount, by }
     reminders: [],     // { id, title, category, due, done, note }
+    remindersEnabled: true,
     weights: [],       // { id, date, kg }
-    ai: { provider: 'deepseek', baseUrl: AI_PROVIDERS.deepseek.baseUrl, apiKey: '', model: AI_PROVIDERS.deepseek.model },
+    ai: { provider: 'deepseek', baseUrl: AI_PROVIDERS.deepseek.baseUrl, apiKey: '', model: AI_PROVIDERS.deepseek.model, tone: 'warm' },
     chat: [],          // [{ role, content, ts }]
   };
 }
@@ -88,7 +73,7 @@ export function loadState() {
     state.pet = { ...defaultState().pet, ...(parsed.pet || {}) };
     state.ai = { ...defaultState().ai, ...(parsed.ai || {}) };
     state.members = Array.isArray(parsed.members) && parsed.members.length ? parsed.members : defaultState().members;
-    state.tasks = Array.isArray(parsed.tasks) && parsed.tasks.length ? parsed.tasks : defaultTasks(state.pet.species);
+    if (typeof state.remindersEnabled !== 'boolean') state.remindersEnabled = true;
     return state;
   } catch {
     return defaultState();
@@ -160,67 +145,30 @@ export function avatarColor(name) {
   return AVATAR_COLORS[h % AVATAR_COLORS.length];
 }
 
-export function todayCompletions(state, key = todayKey()) {
-  return state.completions[key] || {};
+/* ---------- 记录统计 ---------- */
+
+export function entriesSince(state, days) {
+  const since = Date.now() - days * 86400000;
+  return state.entries.filter((e) => e.ts >= since);
 }
 
-export function isTaskDone(state, taskId, key = todayKey()) {
-  return Boolean(todayCompletions(state, key)[taskId]);
+export function weekEntryCount(state) {
+  return entriesSince(state, 7).length;
 }
 
-export function completeTask(state, taskId) {
-  const key = todayKey();
-  const by = state.activeMember;
-  const at = Date.now();
-  state.completions[key] = { ...(state.completions[key] || {}), [taskId]: { by, at } };
-  const task = state.tasks.find((t) => t.id === taskId);
-  if (task) {
-    state.entries.unshift({
-      id: uid('e'), ts: at, type: 'care', text: task.title,
-      taskId, by,
-    });
-  }
-}
-
-export function undoTask(state, taskId) {
-  const key = todayKey();
-  if (!state.completions[key]) return;
-  delete state.completions[key][taskId];
-  state.entries = state.entries.filter((e) => !(e.type === 'care' && e.taskId === taskId && dateKeyOf(new Date(e.ts)) === key));
-}
-
-export function careProgress(state, key = todayKey()) {
-  const done = state.tasks.filter((t) => isTaskDone(state, t.id, key)).length;
-  return { done, total: state.tasks.length };
-}
-
-// 连续照顾天数：从今天（或昨天）往前，全部任务完成的天数
-export function careStreak(state) {
+// 连续记录天数：今天或昨天有记录就算起点
+export function recordStreak(state) {
   let streak = 0;
   const cursor = new Date();
-  const todayDone = state.tasks.every((t) => isTaskDone(state, t.id, todayKey()));
-  if (!todayDone) cursor.setDate(cursor.getDate() - 1);
+  const hasToday = state.entries.some((e) => dateKeyOf(new Date(e.ts)) === todayKey());
+  if (!hasToday) cursor.setDate(cursor.getDate() - 1);
   for (;;) {
     const key = dateKeyOf(cursor);
-    const allDone = state.tasks.every((t) => isTaskDone(state, t.id, key));
-    if (!allDone) break;
+    if (!state.entries.some((e) => dateKeyOf(new Date(e.ts)) === key)) break;
     streak += 1;
     cursor.setDate(cursor.getDate() - 1);
   }
   return streak;
-}
-
-export function weekStats(state) {
-  let done = 0, total = 0;
-  for (let i = 6; i >= 0; i--) {
-    const key = daysAgoKey(i);
-    const comp = state.completions[key] || {};
-    for (const t of state.tasks) {
-      total += 1;
-      if (comp[t.id]) done += 1;
-    }
-  }
-  return { done, total, rate: total ? Math.round((done / total) * 100) : 0 };
 }
 
 export function upcomingReminders(state, withinDays = 30) {
